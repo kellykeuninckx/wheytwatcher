@@ -34,7 +34,7 @@ struct CopyMealsView: View {
                         Text(dayTitle)
                             .font(.headline)
                         
-                        Text(selectedDate.formatted(date: .complete, time: .omitted))
+                        Text(selectedDate.formatted(date: .abbreviated, time: .omitted))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -63,11 +63,10 @@ struct CopyMealsView: View {
                                 
                                 HStack {
                                     
-                                    Image(systemName: icon(for: meal.0))
-                                        .foregroundStyle(Color.wwTeal)
-                                        .frame(width: 24)
+                               
                                     
                                     Text(meal.0.rawValue)
+                                        .font(.headline)
                                     
                                     Spacer()
                                     
@@ -95,7 +94,7 @@ struct CopyMealsView: View {
                     Button {
                         showingDatePicker.toggle()
                     } label: {
-                        Label("Kies andere datum", systemImage: "calendar")
+                        Label("Andere datum", systemImage: "calendar")
                     }
                     
                 }

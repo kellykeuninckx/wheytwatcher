@@ -4,6 +4,15 @@ import SwiftData
 struct TodayView: View {
     let profile: UserProfile
 
+    @State private var selectedGoalMode: GoalMode
+    @State private var selectedGoalPace: GoalPace
+
+    init(profile: UserProfile) {
+        self.profile = profile
+        _selectedGoalMode = State(initialValue: profile.goalMode)
+        _selectedGoalPace = State(initialValue: profile.goalPace)
+    }
+
     @Environment(\.modelContext) private var modelContext
     @Query private var foodEntries: [FoodLogEntry]
     @Query private var trainings: [TrainingSession]
@@ -18,6 +27,7 @@ struct TodayView: View {
     @State private var showingMeals = false
     @State private var showingBarcodeScanner = false
 
+
     private var todaysFood: [FoodLogEntry] {
         foodEntries.filter { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }
     }
@@ -31,7 +41,12 @@ struct TodayView: View {
     }
 
     private var target: MacroTarget {
-        MacroCalculator.calculate(for: profile, extraTrainingCalories: todaysTrainingCalories)
+        MacroCalculator.calculate(
+            for: profile,
+            goalMode: selectedGoalMode,
+            goalPace: selectedGoalPace,
+            extraTrainingCalories: todaysTrainingCalories
+        )
     }
 
     private var totals: MacroTotals {
@@ -121,13 +136,55 @@ struct TodayView: View {
                     .font(.subheadline)
                     .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
                 
-                Text(profile.goalMode.rawValue)
-                    .font(.caption.bold())
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.wwAqua.opacity(0.18))
-                    .foregroundStyle(Color.wwTeal)
-                    .clipShape(Capsule())
+                HStack(spacing: 8) {
+
+                    Menu {
+
+                        ForEach(GoalMode.allCases) { mode in
+                            Button(mode.rawValue) {
+                                selectedGoalMode = mode
+
+                                if isToday {
+                                    upsertTodaySnapshot()
+                                }                            }
+                        }
+
+                    } label: {
+
+                        Label(selectedGoalMode.rawValue, systemImage: "chevron.down")
+                            .font(.caption.bold())
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.wwAqua.opacity(0.18))
+                            .foregroundStyle(Color.wwTeal)
+                            .clipShape(Capsule())
+
+                    }
+
+                    Menu {
+
+                        ForEach(GoalPace.allCases) { pace in
+                            Button(pace.rawValue) {
+                                selectedGoalPace = pace
+
+                                if isToday {
+                                    upsertTodaySnapshot()
+                                }
+                            }
+                        }
+
+                    } label: {
+
+                        Label(selectedGoalPace.rawValue, systemImage: "chevron.down")
+                            .font(.caption.bold())
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.orange.opacity(0.15))
+                            .foregroundStyle(.orange)
+                            .clipShape(Capsule())
+
+                    }
+                }
             }
             
             Spacer()
@@ -549,8 +606,8 @@ struct TodayView: View {
 
     private func upsertTodaySnapshot() {
         if let existing = snapshots.first(where: { Calendar.current.isDateInToday($0.date) }) {
-            existing.goalMode = profile.goalMode
-            existing.goalPace = profile.goalPace
+            existing.goalMode = selectedGoalMode
+            existing.goalPace = selectedGoalPace
             existing.calories = target.calories
             existing.proteinGrams = target.proteinGrams
             existing.carbsGrams = target.carbsGrams
@@ -560,8 +617,8 @@ struct TodayView: View {
         } else {
             let snapshot = DailyTargetSnapshot(
                 date: Date(),
-                goalMode: profile.goalMode,
-                goalPace: profile.goalPace,
+                goalMode: selectedGoalMode,
+                goalPace: selectedGoalPace,
                 calories: target.calories,
                 proteinGrams: target.proteinGrams,
                 carbsGrams: target.carbsGrams,

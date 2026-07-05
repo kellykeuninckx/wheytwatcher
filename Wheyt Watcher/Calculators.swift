@@ -12,7 +12,65 @@ struct MacroTarget {
 }
 
 enum MacroCalculator {
-    static func calculate(for profile: UserProfile, extraTrainingCalories: Double = 0) -> MacroTarget {
+    
+    static func calculate(
+        for profile: UserProfile,
+        extraTrainingCalories: Double = 0
+    ) -> MacroTarget {
+        let bmr: Double
+
+                switch profile.sex {
+                case .male:
+                    bmr = 10 * profile.currentWeightKg + 6.25 * profile.heightCm - 5 * Double(profile.age) + 5
+                case .female:
+                    bmr = 10 * profile.currentWeightKg + 6.25 * profile.heightCm - 5 * Double(profile.age) - 161
+                }
+
+        let maintenance = bmr * profile.activityLevel.multiplier
+        let adjustment = maintenance * profile.goalPace.calorieAdjustmentPercentage(for: profile.goalMode);            let targetCalories = maintenance + adjustment + extraTrainingCalories
+
+        let proteinMultiplier: Double
+        let fatMultiplier: Double
+
+        switch profile.goalMode {
+        case .cut:
+            proteinMultiplier = 2.2
+            fatMultiplier = 0.7
+        case .maintenance:
+            proteinMultiplier = 2.0
+            fatMultiplier = 0.8
+        case .bulk:
+            proteinMultiplier = 1.8
+            fatMultiplier = 0.8
+        }
+
+        let protein = profile.currentWeightKg * proteinMultiplier
+        let fat = profile.currentWeightKg * fatMultiplier
+        let fiber = 30.0
+
+        let caloriesFromProtein = protein * 4
+        let caloriesFromFat = fat * 9
+        let remainingCalories = max(targetCalories - caloriesFromProtein - caloriesFromFat, 0)
+        let carbs = remainingCalories / 4
+
+        return MacroTarget(
+            calories: targetCalories,
+            proteinGrams: protein,
+            carbsGrams: carbs,
+            fatGrams: fat,
+            fiberGrams: fiber,
+            bmr: bmr,
+            estimatedMaintenanceCalories: maintenance,
+            trainingCalories: extraTrainingCalories
+        )
+    }
+    static func calculate(
+        for profile: UserProfile,
+        goalMode: GoalMode,
+        goalPace: GoalPace,
+        extraTrainingCalories: Double = 0
+    ) -> MacroTarget {
+
         let bmr: Double
 
         switch profile.sex {
@@ -23,13 +81,13 @@ enum MacroCalculator {
         }
 
         let maintenance = bmr * profile.activityLevel.multiplier
-        let adjustment = maintenance * profile.goalPace.calorieAdjustmentPercentage(for: profile.goalMode)
+        let adjustment = maintenance * goalPace.calorieAdjustmentPercentage(for: goalMode)
         let targetCalories = maintenance + adjustment + extraTrainingCalories
 
         let proteinMultiplier: Double
         let fatMultiplier: Double
 
-        switch profile.goalMode {
+        switch goalMode {
         case .cut:
             proteinMultiplier = 2.2
             fatMultiplier = 0.7

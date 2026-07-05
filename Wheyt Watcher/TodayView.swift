@@ -79,7 +79,7 @@ struct TodayView: View {
             .sheet(isPresented: $showingAddFood) {
                 AddFoodView()
             }.sheet(isPresented: $showingCopyMeal) {
-                Text("CopyMealView")
+                CopyMealsView()
             }
 
             .sheet(isPresented: $showingFavorites) {

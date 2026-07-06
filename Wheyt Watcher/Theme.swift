@@ -9,9 +9,7 @@ extension Color {
     static let wwTeal = Color(red: 0.00, green: 0.55, blue: 0.60)
     static let wwMint = Color(red: 0.35, green: 0.90, blue: 0.75)
     static let wwOrange = Color(red: 0.98, green: 0.63, blue: 0.28)
-
     static let wwCoral = Color(red: 0.96, green: 0.39, blue: 0.47)
-
     static let wwPurple = Color(red: 0.52, green: 0.42, blue: 0.93)
 
     // Donkere accentkleur voor alle tekst

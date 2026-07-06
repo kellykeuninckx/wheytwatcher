@@ -41,7 +41,7 @@ struct FavoritesView: View {
                                     HStack {
                                         
                                         Image(systemName: "heart.fill")
-                                            .foregroundStyle(.red)
+                                            .foregroundStyle(Color.wwCoral)
                                         
                                         VStack(alignment: .leading, spacing: 2) {
                                             

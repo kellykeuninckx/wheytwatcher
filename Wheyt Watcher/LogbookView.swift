@@ -8,82 +8,105 @@ struct LogbookView: View {
     @Query private var favorites: [FavoriteFood]
     @Environment(\.modelContext) private var modelContext
 
+    private var groupedEntries: [Date: [FoodLogEntry]] {
+
+        Dictionary(
+            grouping: foodEntries
+        ) { entry in
+
+            Calendar.current.startOfDay(for: entry.date)
+
+        }
+
+    }
+    
+    private var sortedDays: [Date] {
+
+        groupedEntries.keys.sorted(by: >)
+
+    }
+    
     var body: some View {
         NavigationStack {
             List {
-                Section("Eten") {
+                ForEach(sortedDays, id: \.self) { day in
 
-                    ForEach(MealCategory.allCases, id: \.self) { meal in
+                    Section(day.formatted(date: .abbreviated, time: .omitted)) {
 
-                        let mealEntries = foodEntries
-                            .filter { $0.mealCategory == meal }
-                            .sorted { $0.date > $1.date }
+                        let dayEntries = groupedEntries[day] ?? []
 
-                        if !mealEntries.isEmpty {
+                        ForEach(MealCategory.allCases, id: \.self) { meal in
 
-                            Section(meal.rawValue) {
+                            let mealEntries = dayEntries
+                                .filter { $0.mealCategory == meal }
 
-                                ForEach(mealEntries) { entry in
+                            if !mealEntries.isEmpty {
 
-                                    HStack {
+                                Section(meal.rawValue) {
 
-                                        VStack(alignment: .leading, spacing: 2) {
+                                    ForEach(mealEntries) { entry in
 
-                                            Text(entry.name)
-                                                .font(.headline)
+                                        HStack {
 
-                                            Text("\(entry.grams.roundedInt) g • \(entry.calories.roundedInt) kcal")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
+                                            VStack(alignment: .leading, spacing: 2) {
 
-                                        }
+                                                Text(entry.name)
+                                                    .font(.headline)
 
-                                        Spacer()
-
-                                        Button {
-
-                                            if let existingFavorite = favorites.first(where: { $0.name == entry.name }) {
-
-                                                modelContext.delete(existingFavorite)
-
-                                            } else {
-
-                                                let favorite = FavoriteFood(
-                                                    name: entry.name,
-                                                    grams: entry.grams,
-                                                    calories: entry.calories,
-                                                    proteinGrams: entry.proteinGrams,
-                                                    carbsGrams: entry.carbsGrams,
-                                                    fatGrams: entry.fatGrams,
-                                                    fiberGrams: entry.fiberGrams
-                                                )
-
-                                                modelContext.insert(favorite)
+                                                Text("\(entry.grams.roundedInt) g • \(entry.calories.roundedInt) kcal")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
 
                                             }
 
-                                            try? modelContext.save()
+                                            Spacer()
 
-                                        } label: {
+                                            Button {
 
-                                            Image(systemName: isFavorite(entry) ? "heart.fill" : "heart")
-                                                .foregroundStyle(isFavorite(entry) ? .red : .secondary)
+                                                if let existingFavorite = favorites.first(where: { $0.name == entry.name }) {
+
+                                                    modelContext.delete(existingFavorite)
+
+                                                } else {
+
+                                                    let favorite = FavoriteFood(
+                                                        name: entry.name,
+                                                        grams: entry.grams,
+                                                        calories: entry.calories,
+                                                        proteinGrams: entry.proteinGrams,
+                                                        carbsGrams: entry.carbsGrams,
+                                                        fatGrams: entry.fatGrams,
+                                                        fiberGrams: entry.fiberGrams
+                                                    )
+
+                                                    modelContext.insert(favorite)
+
+                                                }
+
+                                                try? modelContext.save()
+
+                                            } label: {
+
+                                                Image(systemName: isFavorite(entry) ? "heart.fill" : "heart")
+                                                    .foregroundStyle(isFavorite(entry) ? Color.wwCoral : .secondary)
+
+                                            }
+                                            .buttonStyle(.plain)
 
                                         }
-                                        .buttonStyle(.plain)
 
                                     }
+                                    .onDelete { indexSet in
 
-                                }
-                                .onDelete { indexSet in
+                                        for index in indexSet {
 
-                                    for index in indexSet {
+                                            modelContext.delete(mealEntries[index])
 
-                                        modelContext.delete(mealEntries[index])
+                                        }
+
+                                        try? modelContext.save()
 
                                     }
-
-                                    try? modelContext.save()
 
                                 }
 

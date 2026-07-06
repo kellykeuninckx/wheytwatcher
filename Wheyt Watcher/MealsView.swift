@@ -3,13 +3,22 @@ import SwiftData
 
 struct MealsView: View {
     var body: some View {
+
         NavigationStack {
-            ContentUnavailableView(
-                "Maaltijden",
-                systemImage: "fork.knife",
-                description: Text("Hier komen je herhaalmaaltijden. Dit bouwen we als volgende stap.")
-            )
+
+            WWScreen(accent: Color.wwOrange)  {
+
+                WWPlaceholderCard(
+                    icon: "fork.knife.circle.fill",
+                    color: Color.wwOrange,
+                    title: "Nog geen maaltijden",
+                    message: "Sla straks een maaltijd op vanuit Vandaag om hem hier terug te vinden."
+                )
+
+            }
             .navigationTitle("Maaltijden")
+
+        
         }
     }
 }

@@ -61,6 +61,33 @@ struct TodayView: View {
     private var caloriesRemaining: Double {
         max(target.calories - totals.calories, 0)
     }
+    private var proteinRemaining: Double {
+        max(target.proteinGrams - totals.protein, 0)
+    }
+
+    private var fiberRemaining: Double {
+        max(target.fiberGrams - totals.fiber, 0)
+    }
+    private var coachMessage: String {
+
+        if fiberRemaining > 0 && fiberRemaining <= 5 {
+            return "Nog \(fiberRemaining.roundedInt) g vezels te gaan. Eén volkoren boterham of een appel is waarschijnlijk al genoeg."
+        }
+
+        if proteinRemaining > 0 && proteinRemaining <= 30 {
+            return "Nog \(proteinRemaining.roundedInt) g eiwit. Een portie magere kwark of kipfilet brengt je waarschijnlijk al op je doel."
+        }
+
+        if caloriesRemaining > 500 {
+            return "Je hebt nog \(caloriesRemaining.roundedInt) kcal over. Genoeg ruimte voor een volledige maaltijd."
+        }
+
+        if caloriesRemaining <= 100 {
+            return "Je caloriedoel is bijna bereikt. Mooie dag!"
+        }
+
+        return "Je ligt goed op schema. Blijf zo doorgaan!"
+    }
 
     var body: some View {
         NavigationStack {
@@ -79,9 +106,7 @@ struct TodayView: View {
                         
                         trainingCard
                         
-                        if !todaysFood.isEmpty {
-                            todaysLogCard
-                        }
+                        coachCard
                         
                         if isToday {
                             actionButtons
@@ -502,54 +527,28 @@ struct TodayView: View {
     
     // MARK: - Today's Log Card
     
-    private var todaysLogCard: some View {
+    
+    private var coachCard: some View {
+
         VStack(alignment: .leading, spacing: 12) {
+
             HStack {
-                Text("Gelogd")
+
+                Image(systemName: "lightbulb.fill")
+                    .foregroundStyle(.yellow)
+
+                Text("Tip van vandaag")
                     .font(.headline)
-                    .foregroundStyle(Color.wwDarkAccent)
-                
-                Spacer()
-                
-                Text("\(todaysFood.count) items")
-                    .font(.caption)
-                    .foregroundStyle(Color.wwDarkAccent.opacity(0.5))
-            }
-            
-            ForEach(todaysFood.sorted { $0.date > $1.date }.prefix(5)) { entry in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(entry.name)
-                            .font(.subheadline)
-                            .foregroundStyle(Color.wwDarkAccent)
-                            .lineLimit(1)
-                        
-                        Text(entry.mealCategory.rawValue)
-                            .font(.caption)
-                            .foregroundStyle(Color.wwDarkAccent.opacity(0.5))
-                    }
 
-                    Spacer()
+            }
 
-                    Text("\(entry.calories.roundedInt) kcal")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
-                }
-                .padding(.vertical, 4)
-                
-                if entry.id != todaysFood.sorted(by: { $0.date > $1.date }).prefix(5).last?.id {
-                    Divider()
-                }
-            }
-            
-            if todaysFood.count > 5 {
-                Text("+ \(todaysFood.count - 5) meer")
-                    .font(.caption)
-                    .foregroundStyle(Color.wwDarkAccent.opacity(0.5))
-                    .frame(maxWidth: .infinity, alignment: .center)
-            }
+            Text(coachMessage)
+                .font(.subheadline)
+                .foregroundStyle(Color.wwDarkAccent)
+
         }
         .wwCard()
+
     }
     
     // MARK: - Action Buttons

@@ -42,7 +42,28 @@ struct LogbookView: View {
 
                                         Button {
 
-                                            print("Hartje ingedrukt")
+                                            if !isFavorite(entry) {
+
+                                                let favorite = FavoriteFood(
+                                                    name: entry.name,
+                                                    grams: entry.grams,
+                                                    calories: entry.calories,
+                                                    proteinGrams: entry.proteinGrams,
+                                                    carbsGrams: entry.carbsGrams,
+                                                    fatGrams: entry.fatGrams,
+                                                    fiberGrams: entry.fiberGrams
+                                                )
+
+                                                modelContext.insert(favorite)
+
+                                                do {
+                                                    try modelContext.save()
+                                                    print("✅ Favorite opgeslagen")
+                                                } catch {
+                                                    print(error)
+                                                }
+
+                                            }
 
                                         } label: {
 

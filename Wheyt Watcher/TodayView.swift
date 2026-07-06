@@ -26,6 +26,7 @@ struct TodayView: View {
     @State private var showingFavorites = false
     @State private var showingMeals = false
     @State private var showingBarcodeScanner = false
+    @State private var showingLogbook = false
 
 
     private var todaysFood: [FoodLogEntry] {
@@ -107,6 +108,9 @@ struct TodayView: View {
 
             .sheet(isPresented: $showingBarcodeScanner) {
                 Text("BarcodeScannerView")
+            }
+            .sheet(isPresented: $showingLogbook) {
+                LogbookView()
             }
             .sheet(isPresented: $showingAddTraining) {
                 AddTrainingView(profile: profile)
@@ -334,6 +338,9 @@ struct TodayView: View {
             }
         }
         .wwCard()
+        .onTapGesture {
+            showingLogbook = true
+        }
     }
     
     // MARK: - Macros Card

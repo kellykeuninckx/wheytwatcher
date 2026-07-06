@@ -77,13 +77,27 @@ struct LogbookView: View {
 
                 Section("Training") {
                     ForEach(trainings.sorted { $0.date > $1.date }) { training in
+
                         VStack(alignment: .leading) {
                             Text(training.type.rawValue)
                                 .font(.headline)
+
                             Text("\(training.durationMinutes) min - RPE \(training.rpe) - \(training.estimatedCaloriesBurned.roundedInt) kcal")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
+
+                    }
+                    .onDelete { indexSet in
+
+                        let sortedTrainings = trainings.sorted { $0.date > $1.date }
+
+                        for index in indexSet {
+                            modelContext.delete(sortedTrainings[index])
+                        }
+
+                        try? modelContext.save()
+
                     }
                 }
             }

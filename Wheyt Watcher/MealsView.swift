@@ -5,7 +5,6 @@ struct MealsView: View {
     
     @Query(sort: \SavedMeal.createdAt, order: .reverse)
     private var savedMeals: [SavedMeal]
-    @State private var showingSaveMeal = false
     
     
     var body: some View {
@@ -37,8 +36,12 @@ struct MealsView: View {
                                 } label: {
 
                                     HStack {
+                                        
+                                        Image(systemName: "fork.knife.circle.fill")
+                                                .font(.title2)
+                                                .foregroundStyle(Color.wwOrange)
 
-                                        VStack(alignment: .leading, spacing: 6) {
+                                        VStack(alignment: .leading, spacing: 3) {
 
                                             Text(meal.name)
                                                 .font(.headline)
@@ -50,7 +53,7 @@ struct MealsView: View {
 
                                             Text("\(Int(meal.items.reduce(0) { $0 + $1.calories })) kcal")
                                                 .font(.caption)
-                                                .foregroundStyle(Color.wwOrange)
+                                                .foregroundStyle(Color.wwSecondaryText)
 
                                         }
 
@@ -61,9 +64,9 @@ struct MealsView: View {
                                             .foregroundStyle(Color.wwSecondaryText)
 
                                     }
-                                    .padding()
-                                    .background(Color.wwCardBackground)
-                                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 14)
+                                    .wwCard()
 
                                 }
                                 .buttonStyle(.plain)
@@ -76,25 +79,7 @@ struct MealsView: View {
                     }
                         .navigationTitle("Maaltijden")
                     
-                        .toolbar {
                             
-                            ToolbarItem(placement: .topBarTrailing) {
-                                
-                                NavigationLinklabel: do {
-                                    
-                                    Image(systemName: "plus")
-                                    
-                                }
-                                
-                                
-                            }
-                            
-                        }
-                        .sheet(isPresented: $showingSaveMeal) {
-
-                            SaveMealView(entries: [])
-
-                        }
                     
                     
                 }

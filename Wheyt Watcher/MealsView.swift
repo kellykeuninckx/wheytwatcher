@@ -30,9 +30,9 @@ struct MealsView: View {
 
                             ForEach(savedMeals) { meal in
 
-                                Button {
+                                NavigationLink {
 
-                                    // detailpagina volgt straks
+                                    MealDetailView(meal: meal)
 
                                 } label: {
 
@@ -79,11 +79,7 @@ struct MealsView: View {
                             
                             ToolbarItem(placement: .topBarTrailing) {
                                 
-                                Button {
-                                    
-                                    showingSaveMeal = true
-                                    
-                                } label: {
+                                NavigationLinklabel: do {
                                     
                                     Image(systemName: "plus")
                                     

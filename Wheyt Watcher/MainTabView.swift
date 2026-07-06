@@ -14,6 +14,10 @@ struct MainTabView: View {
                 .tabItem {
                     Label("Maaltijden", systemImage: "fork.knife")
                 }
+            FavoritesView()
+                .tabItem {
+                    Label("Favorieten", systemImage: "heart.fill")
+                }
 
             LogbookView()
                 .tabItem {

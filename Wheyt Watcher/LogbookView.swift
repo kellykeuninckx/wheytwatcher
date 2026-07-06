@@ -42,7 +42,11 @@ struct LogbookView: View {
 
                                         Button {
 
-                                            if !isFavorite(entry) {
+                                            if let existingFavorite = favorites.first(where: { $0.name == entry.name }) {
+
+                                                modelContext.delete(existingFavorite)
+
+                                            } else {
 
                                                 let favorite = FavoriteFood(
                                                     name: entry.name,
@@ -56,14 +60,9 @@ struct LogbookView: View {
 
                                                 modelContext.insert(favorite)
 
-                                                do {
-                                                    try modelContext.save()
-                                                    print("✅ Favorite opgeslagen")
-                                                } catch {
-                                                    print(error)
-                                                }
-
                                             }
+
+                                            try? modelContext.save()
 
                                         } label: {
 

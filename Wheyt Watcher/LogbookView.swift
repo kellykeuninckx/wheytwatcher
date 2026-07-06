@@ -1,34 +1,33 @@
 import SwiftUI
 import SwiftData
 
-
 struct LogbookView: View {
+
     @Query private var foodEntries: [FoodLogEntry]
     @Query private var trainings: [TrainingSession]
     @Query private var favorites: [FavoriteFood]
+
     @Environment(\.modelContext) private var modelContext
 
+    @State private var isSelecting = false
+    @State private var selectedEntries: Set<FoodLogEntry> = []
+
     private var groupedEntries: [Date: [FoodLogEntry]] {
-
-        Dictionary(
-            grouping: foodEntries
-        ) { entry in
-
-            Calendar.current.startOfDay(for: entry.date)
-
+        Dictionary(grouping: foodEntries) {
+            Calendar.current.startOfDay(for: $0.date)
         }
-
     }
-    
+
     private var sortedDays: [Date] {
-
         groupedEntries.keys.sorted(by: >)
-
     }
-    
+
     var body: some View {
+
         NavigationStack {
+
             List {
+
                 ForEach(sortedDays, id: \.self) { day in
 
                     Section(day.formatted(date: .abbreviated, time: .omitted)) {
@@ -37,8 +36,9 @@ struct LogbookView: View {
 
                         ForEach(MealCategory.allCases, id: \.self) { meal in
 
-                            let mealEntries = dayEntries
-                                .filter { $0.mealCategory == meal }
+                            let mealEntries = dayEntries.filter {
+                                $0.mealCategory == meal
+                            }
 
                             if !mealEntries.isEmpty {
 
@@ -46,54 +46,31 @@ struct LogbookView: View {
 
                                     ForEach(mealEntries) { entry in
 
-                                        HStack {
+                                        LogbookEntryRow(
+                                            entry: entry,
+                                            isFavorite: isFavorite(entry),
 
-                                            VStack(alignment: .leading, spacing: 2) {
+                                            isSelecting: isSelecting,
+                                            isSelected: selectedEntries.contains(entry),
 
-                                                Text(entry.name)
-                                                    .font(.headline)
+                                            toggleFavorite: {
+                                                toggleFavorite(entry)
+                                            },
 
-                                                Text("\(entry.grams.roundedInt) g • \(entry.calories.roundedInt) kcal")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
+                                            toggleSelection: {
 
-                                            }
+                                                if selectedEntries.contains(entry) {
 
-                                            Spacer()
-
-                                            Button {
-
-                                                if let existingFavorite = favorites.first(where: { $0.name == entry.name }) {
-
-                                                    modelContext.delete(existingFavorite)
+                                                    selectedEntries.remove(entry)
 
                                                 } else {
 
-                                                    let favorite = FavoriteFood(
-                                                        name: entry.name,
-                                                        grams: entry.grams,
-                                                        calories: entry.calories,
-                                                        proteinGrams: entry.proteinGrams,
-                                                        carbsGrams: entry.carbsGrams,
-                                                        fatGrams: entry.fatGrams,
-                                                        fiberGrams: entry.fiberGrams
-                                                    )
-
-                                                    modelContext.insert(favorite)
+                                                    selectedEntries.insert(entry)
 
                                                 }
 
-                                                try? modelContext.save()
-
-                                            } label: {
-
-                                                Image(systemName: isFavorite(entry) ? "heart.fill" : "heart")
-                                                    .foregroundStyle(isFavorite(entry) ? Color.wwCoral : .secondary)
-
                                             }
-                                            .buttonStyle(.plain)
-
-                                        }
+                                        )
 
                                     }
                                     .onDelete { indexSet in
@@ -119,47 +96,97 @@ struct LogbookView: View {
                 }
 
                 Section("Training") {
-                    ForEach(trainings.sorted { $0.date > $1.date }) { training in
+
+                    ForEach(trainings.sorted(by: { $0.date > $1.date })) { training in
 
                         VStack(alignment: .leading) {
+
                             Text(training.type.rawValue)
                                 .font(.headline)
 
-                            Text("\(training.durationMinutes) min - RPE \(training.rpe) - \(training.estimatedCaloriesBurned.roundedInt) kcal")
+                            Text("\(training.durationMinutes) min • RPE \(training.rpe) • \(training.estimatedCaloriesBurned.roundedInt) kcal")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+
                         }
 
                     }
                     .onDelete { indexSet in
 
-                        let sortedTrainings = trainings.sorted { $0.date > $1.date }
+                        let sorted = trainings.sorted {
+                            $0.date > $1.date
+                        }
 
                         for index in indexSet {
-                            modelContext.delete(sortedTrainings[index])
+
+                            modelContext.delete(sorted[index])
+
                         }
 
                         try? modelContext.save()
 
                     }
+
                 }
+
             }
             .navigationTitle("Logboek")
+            .toolbar {
+
+                ToolbarItem(placement: .topBarTrailing) {
+
+                    Button(isSelecting ? "Gereed" : "Selecteer") {
+
+                        isSelecting.toggle()
+
+                        if !isSelecting {
+
+                            selectedEntries.removeAll()
+
+                        }
+
+                    }
+
+                }
+
+            }
+
         }
+
     }
+
     private func isFavorite(_ entry: FoodLogEntry) -> Bool {
+
         favorites.contains {
             $0.name == entry.name
         }
+
     }
+
+    private func toggleFavorite(_ entry: FoodLogEntry) {
+
+        if let existing = favorites.first(where: { $0.name == entry.name }) {
+
+            modelContext.delete(existing)
+
+        } else {
+
+            let favorite = FavoriteFood(
+                name: entry.name,
+                grams: entry.grams,
+                calories: entry.calories,
+                proteinGrams: entry.proteinGrams,
+                carbsGrams: entry.carbsGrams,
+                fatGrams: entry.fatGrams,
+                fiberGrams: entry.fiberGrams
+            )
+
+            modelContext.insert(favorite)
+
+        }
+
+        try? modelContext.save()
+
+    }
+
 }
-
-
-
-//
-//  PlaceholderViews.swift
-//  Wheyt Watcher
-//
-//  Created by Kelly Keuninckx on 05/07/2026.
-//
-

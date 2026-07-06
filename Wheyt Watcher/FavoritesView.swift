@@ -28,7 +28,9 @@ struct FavoritesView: View {
 
                     } else {
 
-                        List {
+                        ScrollView {
+
+                            LazyVStack(spacing: 16) {
 
                             ForEach(favorites.sorted { $0.name < $1.name }) { favorite in
                                 
@@ -47,12 +49,31 @@ struct FavoritesView: View {
                                             
                                             Text(favorite.name)
                                                 .font(.headline)
+                                                .foregroundStyle(Color.wwDarkAccent)
                                             
                                             Text("\(favorite.grams.roundedInt) g • \(favorite.calories.roundedInt) kcal")
                                                 .font(.caption)
                                                 .foregroundStyle(.secondary)
                                             
                                         }
+                                        .padding()
+
+                                        .background(
+                                            Color.wwCoral.opacity(0.08)
+                                        )
+
+                                        .clipShape(
+                                            RoundedRectangle(
+                                                cornerRadius: 20,
+                                                style: .continuous
+                                            )
+                                        )
+
+                                        .shadow(
+                                            color: .black.opacity(0.05),
+                                            radius: 8,
+                                            y: 3
+                                        )
                                         
                                         Spacer()
                                         
@@ -62,9 +83,7 @@ struct FavoritesView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .listStyle(.plain)
-                        .scrollContentBackground(.hidden)
-                        .background(Color.clear)
+                        }
 
                     }
 

@@ -16,6 +16,8 @@ struct WheytWatcherApp: App {
             WeightLog.self,
             DailyTargetSnapshot.self,
             FavoriteFood.self,
+            SavedMeal.self,
+            MealItem.self
         ])
     }
 }

@@ -24,9 +24,55 @@ struct MealsView: View {
                     )
                     
                 } else {
-                    
-                    Text("Aantal maaltijden: \(savedMeals.count)")
-                    
+                    ScrollView {
+
+                        LazyVStack(spacing: 16) {
+
+                            ForEach(savedMeals) { meal in
+
+                                Button {
+
+                                    // detailpagina volgt straks
+
+                                } label: {
+
+                                    HStack {
+
+                                        VStack(alignment: .leading, spacing: 6) {
+
+                                            Text(meal.name)
+                                                .font(.headline)
+                                                .foregroundStyle(Color.wwDarkAccent)
+
+                                            Text("\(meal.items.count) ingrediënten")
+                                                .font(.subheadline)
+                                                .foregroundStyle(Color.wwSecondaryText)
+
+                                            Text("\(Int(meal.items.reduce(0) { $0 + $1.calories })) kcal")
+                                                .font(.caption)
+                                                .foregroundStyle(Color.wwOrange)
+
+                                        }
+
+                                        Spacer()
+
+                                        Image(systemName: "chevron.right")
+                                            .foregroundStyle(.secondary)
+
+                                    }
+                                    .padding()
+                                    .background(Color.wwCardBackground)
+                                    .clipShape(RoundedRectangle(cornerRadius: 20))
+
+                                }
+                                .buttonStyle(.plain)
+
+                            }
+
+                        }
+                        .padding()
+
+                    }
                         .navigationTitle("Maaltijden")
                     
                         .toolbar {
@@ -48,8 +94,9 @@ struct MealsView: View {
                             
                         }
                         .sheet(isPresented: $showingSaveMeal) {
-                            
-                            SaveMealView()
+
+                            SaveMealView(entries: [])
+
                         }
                     
                     

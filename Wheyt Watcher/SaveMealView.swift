@@ -3,6 +3,8 @@ import SwiftData
 
 struct SaveMealView: View {
 
+    let entries: [FoodLogEntry]
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
@@ -38,6 +40,21 @@ struct SaveMealView: View {
                     Button("Opslaan") {
 
                         let meal = SavedMeal(name: mealName)
+                        for entry in entries {
+
+                            let item = MealItem(
+                                name: entry.name,
+                                grams: entry.grams,
+                                calories: entry.calories,
+                                proteinGrams: entry.proteinGrams,
+                                carbsGrams: entry.carbsGrams,
+                                fatGrams: entry.fatGrams,
+                                fiberGrams: entry.fiberGrams
+                            )
+
+                            meal.items.append(item)
+
+                        }
 
                         modelContext.insert(meal)
 

@@ -10,6 +10,7 @@ struct LogbookView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var isSelecting = false
+    @State private var showingSaveMeal = false
     @State private var selectedEntries: Set<FoodLogEntry> = []
 
     private var groupedEntries: [Date: [FoodLogEntry]] {
@@ -131,6 +132,39 @@ struct LogbookView: View {
 
             }
             .navigationTitle("Logboek")
+            .safeAreaInset(edge: .bottom) {
+
+                if isSelecting && !selectedEntries.isEmpty {
+
+                    VStack(spacing: 12) {
+
+                        Text("\(selectedEntries.count) product\(selectedEntries.count == 1 ? "" : "en") geselecteerd")
+                            .font(.subheadline.bold())
+
+                        Button {
+
+                            showingSaveMeal = true
+
+
+                        } label: {
+
+                            Label("Bewaar als maaltijd", systemImage: "square.and.arrow.down.fill")
+                                .frame(maxWidth: .infinity)
+
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.wwOrange)
+
+                    }
+                    .padding()
+                    .background(Color.wwCardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+
+                }
+
+            }
             .toolbar {
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -144,16 +178,26 @@ struct LogbookView: View {
                             selectedEntries.removeAll()
 
                         }
+                    
 
                     }
 
                 }
 
             }
+            
+            .sheet(isPresented: $showingSaveMeal) {
+
+                SaveMealView(
+                    entries: Array(selectedEntries)
+                )
+
+            }
+
+            }
 
         }
 
-    }
 
     private func isFavorite(_ entry: FoodLogEntry) -> Bool {
 

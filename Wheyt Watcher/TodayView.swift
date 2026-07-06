@@ -98,7 +98,7 @@ struct TodayView: View {
             }
 
             .sheet(isPresented: $showingFavorites) {
-                Text("FavoritesView")
+                FavoritesView()
             }
 
             .sheet(isPresented: $showingMeals) {

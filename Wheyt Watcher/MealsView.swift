@@ -57,7 +57,8 @@ struct MealsView: View {
                                         Spacer()
 
                                         Image(systemName: "chevron.right")
-                                            .foregroundStyle(.secondary)
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(Color.wwSecondaryText)
 
                                     }
                                     .padding()

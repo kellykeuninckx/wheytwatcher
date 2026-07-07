@@ -96,9 +96,7 @@ struct ProgressViewScreen: View {
         return days
     }
 
-    private var loggingComplianceText: String {
-        "\(loggedDays.count)/\(totalDaysInRange) dagen gelogd"
-    }
+
 
     // MARK: - Gewichtstrend (kleinste-kwadraten regressie)
 
@@ -140,7 +138,8 @@ struct ProgressViewScreen: View {
                         weightCard
                         caloriesCard
                         proteinCard
-                        complianceCard
+                        coachCard
+                        
                     }
                     .padding(.horizontal, 18)
                     .padding(.bottom, 24)
@@ -361,32 +360,71 @@ struct ProgressViewScreen: View {
         .wwCard()
     }
 
-    // MARK: - Logging-compliance
+    // MARK: - Logging-coach
 
-    private var complianceCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
+    private var currentLoggingStreak: Int {
+
+        var streak = 0
+        var currentDate = Calendar.current.startOfDay(for: Date())
+
+        while loggedDays.contains(currentDate) {
+
+            streak += 1
+
+            guard let previousDay = Calendar.current.date(
+                byAdding: .day,
+                value: -1,
+                to: currentDate
+            ) else { break }
+
+            currentDate = previousDay
+
+        }
+
+        return streak
+
+    }
+
+    private var coachMessage: String {
+
+        if currentLoggingStreak >= 7 {
+            return "🔥 Je hebt al \(currentLoggingStreak) dagen op rij gelogd. Fantastisch bezig!"
+        }
+
+        if currentLoggingStreak >= 3 {
+            return "💪 Je bent al \(currentLoggingStreak) dagen consequent aan het loggen. Ga zo door!"
+        }
+
+        if currentLoggingStreak >= 1 {
+            return "👏 Mooie start! Elke dag loggen geeft de beste inzichten."
+        }
+
+        return "📈 Begin vandaag met loggen om je voortgang goed te kunnen volgen."
+
+    }
+    
+    private var coachCard: some View {
+
+        VStack(alignment: .leading, spacing: 12) {
+
             HStack {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(loggedDays.count == totalDaysInRange ? Color.wwTeal : Color.wwOrange)
 
-                Text("Logging")
+                Image(systemName: "figure.strengthtraining.traditional")
+                    .foregroundStyle(Color.wwTeal)
+
+                Text("Coach")
                     .font(.headline)
                     .foregroundStyle(Color.wwDarkAccent)
 
-                Spacer()
-
-                Text(loggingComplianceText)
-                    .font(.subheadline.bold())
-                    .foregroundStyle(Color.wwDarkAccent)
             }
 
-            if Double(loggedDays.count) / Double(max(totalDaysInRange, 1)) < 0.7 {
-                Text("Minder dan 70% van de dagen gelogd. Adviezen op basis van deze periode zijn minder betrouwbaar.")
-                    .font(.caption)
-                    .foregroundStyle(Color.wwCoral)
-            }
+            Text(coachMessage)
+                .font(.subheadline)
+                .foregroundStyle(Color.wwSecondaryText)
+
         }
         .wwCard()
+
     }
 }
 

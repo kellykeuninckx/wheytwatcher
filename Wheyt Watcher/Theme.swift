@@ -1,8 +1,9 @@
 import SwiftUI
+import UIKit
 
 extension Color {
 
-    // MARK: - Hoofdkleuren
+    // MARK: - Hoofdkleuren (gelijk in beide modi)
 
     static let wwBlue = Color(red: 0.10, green: 0.35, blue: 0.85)
     static let wwAqua = Color(red: 0.00, green: 0.75, blue: 0.80)
@@ -12,17 +13,35 @@ extension Color {
     static let wwCoral = Color(red: 0.96, green: 0.39, blue: 0.47)
     static let wwPurple = Color(red: 0.52, green: 0.42, blue: 0.93)
 
-    // Donkere accentkleur voor alle tekst
-    static let wwDarkAccent = Color(red: 0.08, green: 0.23, blue: 0.30)
+    // MARK: - Adaptieve kleuren (licht/donker) — volgen .preferredColorScheme
 
-    // Achtergrond
-    static let wwBackground = Color(red: 0.88, green: 0.96, blue: 0.95)
+    // Hoofdkleur voor alle tekst
+    static let wwDarkAccent = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.white
+            : UIColor(red: 0.08, green: 0.23, blue: 0.30, alpha: 1)
+    })
+
+    // Achtergrond (canvas)
+    static let wwBackground = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.06, green: 0.13, blue: 0.17, alpha: 1)
+            : UIColor(red: 0.88, green: 0.96, blue: 0.95, alpha: 1)
+    })
 
     // Kaarten
-    static let wwCardBackground = Color.white
+    static let wwCardBackground = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.235, green: 0.40, blue: 0.431, alpha: 1)
+            : UIColor.white
+    })
 
     // Achtergrond van lege ringen
-    static let wwRingBackground = Color.wwTeal.opacity(0.18)
+    static let wwRingBackground = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.white.withAlphaComponent(0.14)
+            : UIColor(red: 0.00, green: 0.55, blue: 0.60, alpha: 0.18)
+    })
 
     // Secundaire tekst
     static let wwSecondaryText = Color.wwDarkAccent.opacity(0.60)
@@ -30,6 +49,7 @@ extension Color {
     // Tertiaire tekst
     static let wwTertiaryText = Color.wwDarkAccent.opacity(0.40)
 }
+
 
 extension LinearGradient {
 
@@ -76,6 +96,8 @@ extension Double {
 
 struct WWCardStyle: ViewModifier {
 
+    @Environment(\.colorScheme) private var colorScheme
+
     func body(content: Content) -> some View {
         content
             .padding(18)
@@ -86,8 +108,12 @@ struct WWCardStyle: ViewModifier {
                     style: .continuous
                 )
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(Color.white.opacity(colorScheme == .dark ? 0.06 : 0), lineWidth: 1)
+            )
             .shadow(
-                color: Color.black.opacity(0.05),
+                color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.05),
                 radius: 10,
                 x: 0,
                 y: 4
@@ -107,6 +133,8 @@ extension View {
 // MARK: - Background
 
 struct DumbbellPatternBackground: View {
+
+    @Environment(\.colorScheme) private var colorScheme
 
     let iconCount = 35
 
@@ -133,7 +161,9 @@ struct DumbbellPatternBackground: View {
                     Image(systemName: "dumbbell.fill")
                         .font(.system(size: 22))
                         .foregroundStyle(
-                            Color.wwTeal.opacity(0.12)
+                            colorScheme == .dark
+                                ? Color.white.opacity(0.04)
+                                : Color.wwTeal.opacity(0.12)
                         )
                         .rotationEffect(.degrees(rotation))
                         .position(position)
@@ -190,3 +220,4 @@ struct DumbbellPatternBackground: View {
     }
 
 }
+

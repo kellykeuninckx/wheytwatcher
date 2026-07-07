@@ -29,6 +29,8 @@ struct TodayView: View {
     @State private var showingLogbook = false
     @State private var showingProfile = false
 
+    @AppStorage("wwIsDarkTheme") private var isDarkTheme: Bool = true
+
 
     private var todaysFood: [FoodLogEntry] {
         foodEntries.filter { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }
@@ -259,50 +261,74 @@ struct TodayView: View {
             
             Spacer()
             
-            Menu {
-                Button {
-                    showingCopyMeal = true
+            HStack(spacing: 10) {
+                themeToggleButton
+
+                Menu {
+                    Button {
+                        showingCopyMeal = true
+                    } label: {
+                        Label("Kopieer product", systemImage: "doc.on.doc")
+                    }
+                    
+                    Button {
+                        showingFavorites = true
+                    } label: {
+                        Label("Favorieten", systemImage: "star.fill")
+                    }
+                    
+                    Button {
+                        showingMeals = true
+                    } label: {
+                        Label("Maaltijden", systemImage: "fork.knife")
+                    }
+                    
+                    Button {
+                        showingBarcodeScanner = true
+                    } label: {
+                        Label("Scan barcode", systemImage: "barcode.viewfinder")
+                    }
+                    
+                    Divider()
+                    
+                    Button {
+                        showingAddFood = true
+                    } label: {
+                        Label("Voeg handmatig toe", systemImage: "square.and.pencil")
+                    }
+                    
                 } label: {
-                    Label("Kopieer product", systemImage: "doc.on.doc")
+                    Image(systemName: "fork.knife.circle.fill")
+                        .font(.title2)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(Color.wwTeal)
+                        .padding(10)
+                        .background(Color.wwCardBackground)
+                        .clipShape(Circle())
+                        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                 }
-                
-                Button {
-                    showingFavorites = true
-                } label: {
-                    Label("Favorieten", systemImage: "star.fill")
-                }
-                
-                Button {
-                    showingMeals = true
-                } label: {
-                    Label("Maaltijden", systemImage: "fork.knife")
-                }
-                
-                Button {
-                    showingBarcodeScanner = true
-                } label: {
-                    Label("Scan barcode", systemImage: "barcode.viewfinder")
-                }
-                
-                Divider()
-                
-                Button {
-                    showingAddFood = true
-                } label: {
-                    Label("Voeg handmatig toe", systemImage: "square.and.pencil")
-                }
-                
-            } label: {
-                Image(systemName: "fork.knife.circle.fill")
-                    .font(.title2)
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(Color.wwTeal)
-                    .padding(10)
-                    .background(Color.wwCardBackground)
-                    .clipShape(Circle())
-                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
             }
         }
+    }
+
+    // MARK: - Thema-toggle
+
+    private var themeToggleButton: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isDarkTheme.toggle()
+            }
+        } label: {
+            Image(systemName: isDarkTheme ? "moon.fill" : "sun.max.fill")
+                .font(.title2)
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(Color.wwTeal)
+                .padding(10)
+                .background(Color.wwCardBackground)
+                .clipShape(Circle())
+                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+        }
+        .accessibilityLabel(isDarkTheme ? "Schakel naar licht thema" : "Schakel naar donker thema")
     }
     
     // MARK: - Date Navigator
@@ -715,3 +741,4 @@ struct MacroTotals {
         fiber = entries.reduce(0) { $0 + $1.fiberGrams }
     }
 }
+

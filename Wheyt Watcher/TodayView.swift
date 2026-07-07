@@ -28,6 +28,7 @@ struct TodayView: View {
     @State private var showingBarcodeScanner = false
     @State private var showingLogbook = false
     @State private var showingProfile = false
+    @State private var showingQuickAddMenu = false
 
     @AppStorage("wwIsDarkTheme") private var isDarkTheme: Bool = true
 
@@ -128,6 +129,30 @@ struct TodayView: View {
                     .padding(.horizontal, 18)
                     .padding(.bottom, 24)
                 }
+
+                if showingQuickAddMenu {
+                    Color.black.opacity(0.001)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                showingQuickAddMenu = false
+                            }
+                        }
+
+                    VStack {
+                        HStack {
+                            Spacer()
+                            quickAddDropdown
+                                .padding(.trailing, 18)
+                        }
+                        // Let op: deze top-padding is een schatting (nav bar + header-hoogte).
+                        // Even visueel checken in Xcode en desgewenst bijstellen.
+                        .padding(.top, 85)
+
+                        Spacer()
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingAddFood) {
@@ -141,7 +166,7 @@ struct TodayView: View {
             }
 
             .sheet(isPresented: $showingMeals) {
-                Text("MealsView")
+                MealsView()
             }
 
             .sheet(isPresented: $showingBarcodeScanner) {
@@ -259,45 +284,10 @@ struct TodayView: View {
             HStack(spacing: 10) {
                 themeToggleButton
 
-                Menu {
-                    Button {
-                        showingCopyMeal = true
-                    } label: {
-                        Label("Kopieer product", systemImage: "doc.on.doc")
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        showingQuickAddMenu.toggle()
                     }
-                    
-                    Button {
-                        showingFavorites = true
-                    } label: {
-                        Label("Favorieten", systemImage: "star.fill")
-                    }
-                    
-                    Button {
-                        showingMeals = true
-                    } label: {
-                        Label("Maaltijden", systemImage: "fork.knife")
-                    }
-                    
-                    Button {
-                        showingBarcodeScanner = true
-                    } label: {
-                        Label("Scan barcode", systemImage: "barcode.viewfinder")
-                    }
-                    
-                    Divider()
-                    
-                    Button {
-                        showingAddFood = true
-                    } label: {
-                        Label("Voeg handmatig toe", systemImage: "square.and.pencil")
-                    }
-
-                    Button {
-                        showingAddWeight = true
-                    } label: {
-                        Label("Gewicht invoeren", systemImage: "scalemass")
-                    }
-                    
                 } label: {
                     Image(systemName: "fork.knife.circle.fill")
                         .font(.title2)
@@ -310,6 +300,82 @@ struct TodayView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Quick-add dropdown
+
+    private struct QuickAddOption: Identifiable {
+        let id = UUID()
+        let icon: String
+        let title: String
+        let action: () -> Void
+    }
+
+    private var quickAddOptions: [QuickAddOption] {
+        [
+            QuickAddOption(icon: "doc.on.doc", title: "Kopieer product") {
+                showingCopyMeal = true
+            },
+            QuickAddOption(icon: "star.fill", title: "Voeg favoriet toe") {
+                showingFavorites = true
+            },
+            QuickAddOption(icon: "fork.knife", title: "Voeg maaltijd toe") {
+                showingMeals = true
+            },
+            QuickAddOption(icon: "barcode.viewfinder", title: "Scan barcode") {
+                showingBarcodeScanner = true
+            },
+            QuickAddOption(icon: "square.and.pencil", title: "Voeg handmatig toe") {
+                showingAddFood = true
+            },
+            QuickAddOption(icon: "scalemass", title: "Voer gewicht in") {
+                showingAddWeight = true
+            }
+        ]
+    }
+
+    private var quickAddDropdown: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(quickAddOptions.enumerated()), id: \.element.id) { index, option in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        showingQuickAddMenu = false
+                    }
+                    option.action()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: option.icon)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.wwTeal)
+                            .frame(width: 20)
+
+                        Text(option.title)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.wwDarkAccent)
+
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                if index < quickAddOptions.count - 1 {
+                    Divider()
+                        .padding(.leading, 46)
+                }
+            }
+        }
+        .padding(.vertical, 6)
+        .frame(width: 220)
+        .background(Color.wwCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.25), radius: 12, x: 0, y: 6)
     }
 
     // MARK: - Thema-toggle

@@ -23,115 +23,131 @@ struct LogbookView: View {
         groupedEntries.keys.sorted(by: >)
     }
 
+    private var sortedTrainings: [TrainingSession] {
+        trainings.sorted { $0.date > $1.date }
+    }
+
     var body: some View {
 
         NavigationStack {
 
-            List {
+            ZStack {
 
-                ForEach(sortedDays, id: \.self) { day in
+                DumbbellPatternBackground()
 
-                    Section(day.formatted(date: .abbreviated, time: .omitted)) {
+                List {
 
-                        let dayEntries = groupedEntries[day] ?? []
+                    ForEach(sortedDays, id: \.self) { day in
 
-                        ForEach(MealCategory.allCases, id: \.self) { meal in
+                        Section {
 
-                            let mealEntries = dayEntries.filter {
-                                $0.mealCategory == meal
-                            }
+                            let dayEntries = groupedEntries[day] ?? []
 
-                            if !mealEntries.isEmpty {
+                            ForEach(MealCategory.allCases, id: \.self) { meal in
 
-                                Section(meal.rawValue) {
+                                let mealEntries = dayEntries.filter {
+                                    $0.mealCategory == meal
+                                }
 
-                                    ForEach(mealEntries) { entry in
+                                if !mealEntries.isEmpty {
 
-                                        LogbookEntryRow(
-                                            entry: entry,
-                                            isFavorite: isFavorite(entry),
+                                    Section {
 
-                                            isSelecting: isSelecting,
-                                            isSelected: selectedEntries.contains(entry),
+                                        ForEach(mealEntries) { entry in
 
-                                            toggleFavorite: {
-                                                toggleFavorite(entry)
-                                            },
+                                            LogbookEntryRow(
+                                                entry: entry,
+                                                isFavorite: isFavorite(entry),
 
-                                            toggleSelection: {
+                                                isSelecting: isSelecting,
+                                                isSelected: selectedEntries.contains(entry),
 
-                                                if selectedEntries.contains(entry) {
+                                                toggleFavorite: {
+                                                    toggleFavorite(entry)
+                                                },
 
-                                                    selectedEntries.remove(entry)
+                                                toggleSelection: {
 
-                                                } else {
-
-                                                    selectedEntries.insert(entry)
+                                                    if selectedEntries.contains(entry) {
+                                                        selectedEntries.remove(entry)
+                                                    } else {
+                                                        selectedEntries.insert(entry)
+                                                    }
 
                                                 }
+                                            )
+                                            .listRowBackground(Color.wwCardBackground)
 
+                                        }
+                                        .onDelete { indexSet in
+
+                                            for index in indexSet {
+                                                modelContext.delete(mealEntries[index])
                                             }
-                                        )
 
-                                    }
-                                    .onDelete { indexSet in
-
-                                        for index in indexSet {
-
-                                            modelContext.delete(mealEntries[index])
+                                            try? modelContext.save()
 
                                         }
 
-                                        try? modelContext.save()
-
+                                    } header: {
+                                        Text(meal.rawValue)
+                                            .font(.caption.bold())
+                                            .foregroundStyle(Color.wwSecondaryText)
                                     }
 
                                 }
 
                             }
 
+                        } header: {
+                            Text(day.formatted(date: .abbreviated, time: .omitted))
+                                .font(.subheadline.bold())
+                                .foregroundStyle(Color.wwDarkAccent)
                         }
 
+                    }
+
+                    Section {
+
+                        ForEach(sortedTrainings) { training in
+
+                            VStack(alignment: .leading, spacing: 2) {
+
+                                Text(training.type.rawValue)
+                                    .font(.headline)
+                                    .foregroundStyle(Color.wwDarkAccent)
+
+                                Text("\(training.durationMinutes) min • RPE \(training.rpe) • \(training.estimatedCaloriesBurned.roundedInt) kcal")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.wwSecondaryText)
+
+                            }
+                            .listRowBackground(Color.wwCardBackground)
+
+                        }
+                        .onDelete { indexSet in
+
+                            for index in indexSet {
+                                modelContext.delete(sortedTrainings[index])
+                            }
+
+                            try? modelContext.save()
+
+                        }
+
+                    } header: {
+                        Text("Training")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(Color.wwDarkAccent)
                     }
 
                 }
-
-                Section("Training") {
-
-                    ForEach(trainings.sorted(by: { $0.date > $1.date })) { training in
-
-                        VStack(alignment: .leading) {
-
-                            Text(training.type.rawValue)
-                                .font(.headline)
-
-                            Text("\(training.durationMinutes) min • RPE \(training.rpe) • \(training.estimatedCaloriesBurned.roundedInt) kcal")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-
-                        }
-
-                    }
-                    .onDelete { indexSet in
-
-                        let sorted = trainings.sorted {
-                            $0.date > $1.date
-                        }
-
-                        for index in indexSet {
-
-                            modelContext.delete(sorted[index])
-
-                        }
-
-                        try? modelContext.save()
-
-                    }
-
-                }
+                .scrollContentBackground(.hidden)
+                .listRowSeparatorTint(Color.wwDarkAccent.opacity(0.15))
 
             }
             .navigationTitle("Logboek")
+            .tint(Color.wwTeal)
             .safeAreaInset(edge: .bottom) {
 
                 if isSelecting && !selectedEntries.isEmpty {
@@ -140,17 +156,13 @@ struct LogbookView: View {
 
                         Text("\(selectedEntries.count) product\(selectedEntries.count == 1 ? "" : "en") geselecteerd")
                             .font(.subheadline.bold())
+                            .foregroundStyle(Color.wwDarkAccent)
 
                         Button {
-
                             showingSaveMeal = true
-
-
                         } label: {
-
                             Label("Bewaar als maaltijd", systemImage: "square.and.arrow.down.fill")
                                 .frame(maxWidth: .infinity)
-
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(Color.wwOrange)
@@ -174,30 +186,23 @@ struct LogbookView: View {
                         isSelecting.toggle()
 
                         if !isSelecting {
-
                             selectedEntries.removeAll()
-
                         }
-                    
 
                     }
 
                 }
 
             }
-            
             .sheet(isPresented: $showingSaveMeal) {
-
                 SaveMealView(
                     entries: Array(selectedEntries)
                 )
-
-            }
-
             }
 
         }
 
+    }
 
     private func isFavorite(_ entry: FoodLogEntry) -> Bool {
 

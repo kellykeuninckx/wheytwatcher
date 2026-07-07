@@ -64,8 +64,6 @@ struct MealsView: View {
                                             .foregroundStyle(Color.wwSecondaryText)
 
                                     }
-                                    .padding(.horizontal)
-                                    .padding(.vertical, 14)
                                     .wwCard()
 
                                 }

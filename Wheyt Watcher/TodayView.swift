@@ -124,11 +124,6 @@ struct TodayView: View {
                         macrosCard
                         
                         trainingCard
-                        
-                    
-                        if isToday {
-                            actionButtons
-                        }
                     }
                     .padding(.horizontal, 18)
                     .padding(.bottom, 24)
@@ -295,6 +290,12 @@ struct TodayView: View {
                         showingAddFood = true
                     } label: {
                         Label("Voeg handmatig toe", systemImage: "square.and.pencil")
+                    }
+
+                    Button {
+                        showingAddWeight = true
+                    } label: {
+                        Label("Gewicht invoeren", systemImage: "scalemass")
                     }
                     
                 } label: {
@@ -539,37 +540,52 @@ struct TodayView: View {
                     .padding(.vertical, 8)
                 }
             } else {
-                ForEach(todaysTrainings) { training in
-                    HStack(spacing: 14) {
-                        Image(systemName: trainingIcon(for: training.type))
-                            .font(.title2)
-                            .foregroundStyle(Color.wwTeal)
-                            .frame(width: 36)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(training.type.rawValue)
-                                .font(.subheadline.bold())
-                                .foregroundStyle(Color.wwDarkAccent)
+                List {
+                    ForEach(todaysTrainings) { training in
+                        HStack(spacing: 14) {
+                            Image(systemName: trainingIcon(for: training.type))
+                                .font(.title2)
+                                .foregroundStyle(Color.wwTeal)
+                                .frame(width: 36)
                             
-                            Text("\(training.durationMinutes) min • RPE \(training.rpe)")
-                                .font(.caption)
-                                .foregroundStyle(Color.wwDarkAccent.opacity(0.5))
-                        }
-                        
-                        Spacer()
-                        
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("\(training.estimatedCaloriesBurned.roundedInt)")
-                                .font(.subheadline.bold())
-                                .foregroundStyle(Color.wwDarkAccent)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(training.type.rawValue)
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(Color.wwDarkAccent)
+                                
+                                Text("\(training.durationMinutes) min • RPE \(training.rpe)")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.wwDarkAccent.opacity(0.5))
+                            }
                             
-                            Text("kcal")
-                                .font(.caption)
-                                .foregroundStyle(Color.wwDarkAccent.opacity(0.5))
+                            Spacer()
+                            
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("\(training.estimatedCaloriesBurned.roundedInt)")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(Color.wwDarkAccent)
+                                
+                                Text("kcal")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.wwDarkAccent.opacity(0.5))
+                            }
                         }
+                        .padding(.vertical, 4)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     }
-                    .padding(.vertical, 4)
+                    .onDelete { indexSet in
+                        for index in indexSet {
+                            modelContext.delete(todaysTrainings[index])
+                        }
+                        try? modelContext.save()
+                    }
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollDisabled(true)
+                .frame(height: CGFloat(todaysTrainings.count) * 60)
                 
                 if isToday {
                     Divider()
@@ -610,37 +626,6 @@ struct TodayView: View {
         }
         .wwCard()
 
-    }
-    
-    // MARK: - Action Buttons
-    
-    private var actionButtons: some View {
-        HStack(spacing: 12) {
-            Button {
-                showingAddFood = true
-            } label: {
-                HStack {
-                    Image(systemName: "fork.knife.circle.fill")
-                    Text("Voeg eten toe")
-                }
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.wwTeal)
-            
-            Button {
-                showingAddWeight = true
-            } label: {
-                Image(systemName: "scalemass.fill")
-                    .font(.title3)
-                    .padding(.vertical, 14)
-                    .padding(.horizontal, 18)
-            }
-            .buttonStyle(.bordered)
-            .tint(Color.wwTeal)
-        }
     }
     
     // MARK: - Helper Functions
@@ -741,4 +726,3 @@ struct MacroTotals {
         fiber = entries.reduce(0) { $0 + $1.fiberGrams }
     }
 }
-

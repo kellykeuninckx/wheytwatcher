@@ -28,10 +28,11 @@ struct LogbookEntryRow: View {
 
                 Text(entry.name)
                     .font(.headline)
+                    .foregroundStyle(Color.wwDarkAccent)
 
                 Text("\(entry.grams.roundedInt) g • \(entry.calories.roundedInt) kcal")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.wwSecondaryText)
 
             }
 
@@ -40,7 +41,7 @@ struct LogbookEntryRow: View {
             Button(action: toggleFavorite) {
 
                 Image(systemName: isFavorite ? "heart.fill" : "heart")
-                    .foregroundStyle(isFavorite ? Color.wwCoral : .secondary)
+                    .foregroundStyle(isFavorite ? Color.wwCoral : Color.wwSecondaryText)
 
             }
             .buttonStyle(.plain)
@@ -59,6 +60,11 @@ struct LogbookEntryRow: View {
     }
 
 }//
+//  LogbookEntryRow.swift
+//  Wheyt Watcher
+//
+//  Created by Kelly Keuninckx on 06/07/2026.
+//
 //  LogbookEntryRow.swift
 //  Wheyt Watcher
 //

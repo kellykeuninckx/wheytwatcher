@@ -92,45 +92,44 @@ struct ProfileView: View {
                 .font(.headline)
                 .foregroundStyle(Color.wwDarkAccent)
 
-            HStack(spacing: 20) {
+            Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 14) {
 
-                CalorieInfoRow(
-                    icon: "ruler",
-                    label: "Lengte",
-                    value: "\(profile.heightCm.roundedInt) cm",
-                    color: .wwBlue
-                )
-
-                CalorieInfoRow(
-                    icon: "scalemass",
-                    label: "Gewicht",
-                    value: "\(profile.currentWeightKg.roundedInt) kg",
-                    color: .wwTeal
-                )
-
-                Spacer()
-
-            }
-
-            HStack(spacing: 20) {
-
-                CalorieInfoRow(
-                    icon: "figure.run",
-                    label: "Activiteit",
-                    value: profile.activityLevel.rawValue,
-                    color: .wwOrange
-                )
-
-                if let bodyFat = profile.estimatedBodyFatPercentage {
+                GridRow {
                     CalorieInfoRow(
-                        icon: "percent",
-                        label: "Vetpercentage",
-                        value: "\(bodyFat.roundedInt)%",
-                        color: .wwCoral
+                        icon: "ruler",
+                        label: "Lengte",
+                        value: "\(profile.heightCm.roundedInt) cm",
+                        color: .wwBlue
+                    )
+
+                    CalorieInfoRow(
+                        icon: "scalemass",
+                        label: "Gewicht",
+                        value: "\(profile.currentWeightKg.roundedInt) kg",
+                        color: .wwTeal
                     )
                 }
 
-                Spacer()
+                GridRow {
+                    CalorieInfoRow(
+                        icon: "figure.run",
+                        label: "Activiteit",
+                        value: profile.activityLevel.rawValue,
+                        color: .wwOrange
+                    )
+
+                    if let bodyFat = profile.estimatedBodyFatPercentage {
+                        CalorieInfoRow(
+                            icon: "percent",
+                            label: "Vetpercentage",
+                            value: "\(bodyFat.roundedInt)%",
+                            color: .wwCoral
+                        )
+                    } else {
+                        Color.clear
+                            .frame(width: 1, height: 1)
+                    }
+                }
 
             }
 

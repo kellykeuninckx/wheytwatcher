@@ -1,11 +1,9 @@
-
 import SwiftUI
 import SwiftData
 
 struct CopyMealsView: View {
     
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
     
     @Query private var foodEntries: [FoodLogEntry]
     
@@ -55,15 +53,17 @@ struct CopyMealsView: View {
                         
                         ForEach(groupedMeals, id: \.0) { meal in
                             
-                            Button {
+                            NavigationLink {
                                 
-                                copyMeal(meal.1)
+                                CopyMealDetailView(
+                                    meal: meal.0,
+                                    entries: meal.1,
+                                    onFinished: { dismiss() }
+                                )
                                 
                             } label: {
                                 
                                 HStack {
-                                    
-                               
                                     
                                     Text(meal.0.rawValue)
                                         .font(.headline)
@@ -73,15 +73,10 @@ struct CopyMealsView: View {
                                     Text("(\(meal.1.count))")
                                         .foregroundStyle(.secondary)
                                     
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption2)
-                                        .foregroundStyle(.tertiary)
-                                    
                                 }
                                 .padding(.vertical, 6)
                                 
                             }
-                            .buttonStyle(.plain)
                             
                         }
                         
@@ -156,11 +151,83 @@ struct CopyMealsView: View {
         case .other: return "fork.knife"
         }
     }
-    
-    private func copyMeal(_ entries: [FoodLogEntry]) {
-        
-        for item in entries {
-            
+}
+
+// MARK: - Losse producten selecteren voor het kopiëren
+
+struct CopyMealDetailView: View {
+
+    let meal: MealCategory
+    let entries: [FoodLogEntry]
+    let onFinished: () -> Void
+
+    @Environment(\.modelContext) private var modelContext
+    @State private var selectedEntries: Set<FoodLogEntry>
+
+    init(meal: MealCategory, entries: [FoodLogEntry], onFinished: @escaping () -> Void) {
+        self.meal = meal
+        self.entries = entries
+        self.onFinished = onFinished
+        _selectedEntries = State(initialValue: Set(entries))
+    }
+
+    var body: some View {
+        List {
+            ForEach(entries) { entry in
+                Button {
+                    toggle(entry)
+                } label: {
+                    HStack(spacing: 12) {
+
+                        Image(systemName: selectedEntries.contains(entry) ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(selectedEntries.contains(entry) ? Color.wwTeal : Color.secondary)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(entry.name)
+                                .font(.subheadline.bold())
+                                .foregroundStyle(Color.wwDarkAccent)
+
+                            Text("\(entry.grams.roundedInt) g • \(entry.calories.roundedInt) kcal")
+                                .font(.caption)
+                                .foregroundStyle(Color.wwSecondaryText)
+                        }
+
+                        Spacer()
+
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .navigationTitle(meal.rawValue)
+        .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .bottom) {
+            Button {
+                copySelected()
+            } label: {
+                Text("Kopieer \(selectedEntries.count) product\(selectedEntries.count == 1 ? "" : "en")")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.wwOrange)
+            .disabled(selectedEntries.isEmpty)
+            .padding()
+            .background(.thinMaterial)
+        }
+    }
+
+    private func toggle(_ entry: FoodLogEntry) {
+        if selectedEntries.contains(entry) {
+            selectedEntries.remove(entry)
+        } else {
+            selectedEntries.insert(entry)
+        }
+    }
+
+    private func copySelected() {
+        for item in entries where selectedEntries.contains(item) {
+
             let newEntry = FoodLogEntry(
                 date: Date(),
                 mealCategory: item.mealCategory,
@@ -173,15 +240,17 @@ struct CopyMealsView: View {
                 fiberGrams: item.fiberGrams,
                 note: item.note
             )
-            
+
             modelContext.insert(newEntry)
+
         }
-        
+
         try? modelContext.save()
-        
-        dismiss()
-    }}
+
+        onFinished()
+    }
+}
+
 #Preview {
     CopyMealsView()
 }
-

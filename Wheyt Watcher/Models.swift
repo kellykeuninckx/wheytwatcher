@@ -215,6 +215,12 @@ final class GoalPeriod {
     var completedAt: Date?
     var profile: UserProfile?
 
+    /// Cumulatieve bijstelling (in kcal/dag) die de slimme check-in over deze periode heeft toegepast.
+    var calorieAdjustment: Double = 0
+
+    /// Wanneer de laatste 2-wekelijkse check-in heeft plaatsgevonden (nil = nog niet gehad, telt vanaf startDate).
+    var lastCheckInDate: Date?
+
     init(
         startDate: Date,
         durationWeeks: Int,
@@ -228,6 +234,8 @@ final class GoalPeriod {
         self.goalPace = goalPace
         self.isActive = isActive
         self.completedAt = nil
+        self.calorieAdjustment = 0
+        self.lastCheckInDate = nil
     }
 
     var endDate: Date {

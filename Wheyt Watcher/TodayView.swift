@@ -8,6 +8,7 @@ struct TodayView: View {
     @Query private var foodEntries: [FoodLogEntry]
     @Query private var trainings: [TrainingSession]
     @Query private var snapshots: [DailyTargetSnapshot]
+    @Query private var weightLogs: [WeightLog]
 
     @State private var showingAddFood = false
     @State private var showingAddTraining = false
@@ -21,6 +22,8 @@ struct TodayView: View {
     @State private var showingProfile = false
     @State private var showingQuickAddMenu = false
     @State private var showingGoalPeriodEndedSheet = false
+    @State private var showingAdaptiveCheckInSheet = false
+    @State private var adaptiveCheckInResult: AdaptiveCheckInResult?
 
     @AppStorage("wwIsDarkTheme") private var isDarkTheme: Bool = true
 
@@ -42,7 +45,8 @@ struct TodayView: View {
             for: profile,
             goalMode: profile.goalMode,
             goalPace: profile.goalPace,
-            extraTrainingCalories: todaysTrainingCalories
+            extraTrainingCalories: todaysTrainingCalories,
+            manualCalorieAdjustment: profile.activeGoalPeriod?.calorieAdjustment ?? 0
         )
     }
 
@@ -183,11 +187,30 @@ struct TodayView: View {
                     completionMessage: goalCompletionMessage
                 )
             }
+            .sheet(isPresented: $showingAdaptiveCheckInSheet) {
+                if let period = profile.activeGoalPeriod, let result = adaptiveCheckInResult {
+                    AdaptiveCheckInSheet(
+                        result: result,
+                        onApply: { kcal in
+                            period.calorieAdjustment += kcal
+                            period.lastCheckInDate = Date()
+                            try? modelContext.save()
+                        },
+                        onDismiss: {
+                            period.lastCheckInDate = Date()
+                            try? modelContext.save()
+                        }
+                    )
+                }
+            }
             .onAppear {
                 if isToday {
                     ensureTodaySnapshotExists()
                 }
                 checkGoalPeriodEnded()
+                if !showingGoalPeriodEndedSheet {
+                    checkAdaptiveCheckIn()
+                }
             }
             .onChange(of: todaysTrainingCalories) {
                 if isToday {
@@ -218,6 +241,31 @@ struct TodayView: View {
     private var goalCompletionMessage: String {
         let weeks = profile.activeGoalPeriod?.durationWeeks ?? 0
         return "🎉 Goed bezig! Je hebt je \(profile.goalMode.rawValue.lowercased()) van \(weeks) weken volgehouden. Kies hieronder hoe je verder wil — nog een periode in hetzelfde doel, of iets nieuws."
+    }
+
+    // MARK: - Slimme 2-wekelijkse check-in
+
+    private func checkAdaptiveCheckIn() {
+        guard let period = profile.activeGoalPeriod,
+              !period.hasEnded,
+              period.goalMode != .maintenance else { return }
+
+        let referenceDate = period.lastCheckInDate ?? period.startDate
+        let daysSinceCheckIn = Calendar.current.dateComponents(
+            [.day],
+            from: Calendar.current.startOfDay(for: referenceDate),
+            to: Calendar.current.startOfDay(for: Date())
+        ).day ?? 0
+
+        guard daysSinceCheckIn >= 14 else { return }
+
+        adaptiveCheckInResult = AdaptiveCheckInEvaluator.evaluate(
+            period: period,
+            foodEntries: foodEntries,
+            weightLogs: weightLogs,
+            trainings: trainings
+        )
+        showingAdaptiveCheckInSheet = true
     }
 
     // MARK: - Doel-voortgang (read-only, wisselen doe je via Profiel)
@@ -306,10 +354,10 @@ struct TodayView: View {
             QuickAddOption(icon: "doc.on.doc", title: "Kopieer product") {
                 showingCopyMeal = true
             },
-            QuickAddOption(icon: "star.fill", title: "Favorieten") {
+            QuickAddOption(icon: "star.fill", title: "Voeg favoriet toe") {
                 showingFavorites = true
             },
-            QuickAddOption(icon: "fork.knife", title: "Maaltijden") {
+            QuickAddOption(icon: "fork.knife", title: "Voeg maaltijd toe") {
                 showingMeals = true
             },
             QuickAddOption(icon: "barcode.viewfinder", title: "Scan barcode") {
@@ -318,7 +366,7 @@ struct TodayView: View {
             QuickAddOption(icon: "square.and.pencil", title: "Voeg handmatig toe") {
                 showingAddFood = true
             },
-            QuickAddOption(icon: "scalemass", title: "Gewicht invoeren") {
+            QuickAddOption(icon: "scalemass", title: "Voeg weegmoment toe") {
                 showingAddWeight = true
             }
         ]
@@ -781,4 +829,98 @@ struct MacroTotals {
         fat = entries.reduce(0) { $0 + $1.fatGrams }
         fiber = entries.reduce(0) { $0 + $1.fiberGrams }
     }
+}
+
+// MARK: - Slimme check-in sheet
+
+struct AdaptiveCheckInSheet: View {
+
+    let result: AdaptiveCheckInResult
+    let onApply: (Double) -> Void
+    let onDismiss: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 20) {
+
+            Spacer()
+
+            Text(icon)
+                .font(.system(size: 44))
+
+            Text(title)
+                .font(.title3.bold())
+                .foregroundStyle(Color.wwDarkAccent)
+                .multilineTextAlignment(.center)
+
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(Color.wwSecondaryText)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+
+            Spacer()
+
+            if case .suggestAdjustment(let kcal, _) = result {
+
+                Button {
+                    onApply(kcal)
+                    dismiss()
+                } label: {
+                    Text("Pas toe (\(kcal > 0 ? "+" : "")\(Int(kcal)) kcal per dag)")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.wwTeal)
+
+                Button("Niet nu") {
+                    onDismiss()
+                    dismiss()
+                }
+                .foregroundStyle(Color.wwSecondaryText)
+
+            } else {
+
+                Button {
+                    onDismiss()
+                    dismiss()
+                } label: {
+                    Text("Begrepen")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.wwTeal)
+
+            }
+
+        }
+        .padding(30)
+        .presentationDetents([.medium])
+    }
+
+    private var icon: String {
+        switch result {
+        case .insufficientData: return "🧐"
+        case .onTrack: return "✅"
+        case .suggestAdjustment: return "💡"
+        }
+    }
+
+    private var title: String {
+        switch result {
+        case .insufficientData: return "Nog even geduld"
+        case .onTrack: return "Je zit goed op schema!"
+        case .suggestAdjustment: return "Kleine bijstelling?"
+        }
+    }
+
+    private var message: String {
+        switch result {
+        case .insufficientData(let reason): return reason
+        case .onTrack(let message): return message
+        case .suggestAdjustment(_, let reasoning): return reasoning
+        }
+    }
+
 }

@@ -66,18 +66,9 @@ struct ProgressViewScreen: View {
             .mapValues { entries in entries.reduce(0) { $0 + $1.proteinGrams } }
     }
 
-    private var dailyTargetCalories: [Date: Double] {
-        Dictionary(grouping: filteredSnapshots) { Calendar.current.startOfDay(for: $0.date) }
-            .compactMapValues { $0.first?.calories }
-    }
-
     private var dailyTargetProtein: [Date: Double] {
         Dictionary(grouping: filteredSnapshots) { Calendar.current.startOfDay(for: $0.date) }
             .compactMapValues { $0.first?.proteinGrams }
-    }
-
-    private var trainingDays: Set<Date> {
-        Set(filteredTrainings.map { Calendar.current.startOfDay(for: $0.date) })
     }
 
     private var loggedDays: Set<Date> {
@@ -96,10 +87,6 @@ struct ProgressViewScreen: View {
             return max(span + 1, 1)
         }
         return days
-    }
-
-    private var loggingComplianceText: String {
-        "\(loggedDays.count)/\(totalDaysInRange) dagen gelogd"
     }
 
     // MARK: - Gewichtstrend (kleinste-kwadraten regressie)
@@ -133,6 +120,12 @@ struct ProgressViewScreen: View {
         max(totalDaysInRange / 5, 1)
     }
 
+    /// Grotere stap voor de smallere, naast-elkaar-staande grafieken (gewicht/eiwit),
+    /// anders staan de datum-labels te dicht op elkaar.
+    private var compactAxisStride: Int {
+        max(totalDaysInRange / 3, 1)
+    }
+
     var body: some View {
         NavigationStack {
             WWScreen(accent: .wwBlue) {
@@ -140,10 +133,13 @@ struct ProgressViewScreen: View {
                     VStack(spacing: 16) {
                         rangePicker
                         progressCoachCard
-                        weightCard
+
+                        HStack(alignment: .top, spacing: 16) {
+                            weightCard
+                            proteinCard
+                        }
+
                         caloriesCard
-                        proteinCard
-                        complianceCard
                     }
                     .padding(.horizontal, 18)
                     .padding(.bottom, 24)
@@ -212,7 +208,10 @@ struct ProgressViewScreen: View {
                     Text(message.text)
                         .font(.subheadline)
                         .foregroundStyle(Color.wwDarkAccent)
+
+                    Spacer(minLength: 0)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .wwCard()
             }
         }
@@ -316,17 +315,17 @@ struct ProgressViewScreen: View {
     // MARK: - Gewicht
 
     private var weightCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Gewicht")
-                    .font(.headline)
+                    .font(.subheadline.bold())
                     .foregroundStyle(Color.wwDarkAccent)
 
                 Spacer()
 
                 if let latest = filteredWeights.last?.weightKg {
                     Text("\(latest.roundedInt) kg")
-                        .font(.subheadline.bold())
+                        .font(.caption.bold())
                         .foregroundStyle(Color.wwBlue)
                 }
             }
@@ -335,7 +334,7 @@ struct ProgressViewScreen: View {
                 WWPlaceholderCard(
                     icon: "scalemass",
                     color: .wwBlue,
-                    title: "Nog geen gewicht gelogd",
+                    title: "Nog geen gewicht",
                     message: "Log je gewicht om je trend te zien."
                 )
             } else {
@@ -346,7 +345,7 @@ struct ProgressViewScreen: View {
                             y: .value("Gewicht", log.weightKg)
                         )
                         .foregroundStyle(Color.wwBlue.opacity(0.6))
-                        .symbolSize(30)
+                        .symbolSize(20)
                     }
 
                     ForEach(weightTrendPoints, id: \.date) { point in
@@ -357,19 +356,14 @@ struct ProgressViewScreen: View {
                         .foregroundStyle(Color.wwTeal)
                         .lineStyle(StrokeStyle(lineWidth: 2.5))
                     }
-
-                    ForEach(Array(trainingDays), id: \.self) { day in
-                        RuleMark(x: .value("Training", day, unit: .day))
-                            .foregroundStyle(Color.wwOrange.opacity(0.45))
-                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                    }
                 }
-                .frame(height: 180)
+                .frame(height: 130)
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
+                    AxisMarks(values: .stride(by: .day, count: compactAxisStride)) { _ in
                         AxisGridLine()
                             .foregroundStyle(Color.wwDarkAccent.opacity(0.15))
                         AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                            .font(.caption2)
                             .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
                     }
                 }
@@ -378,11 +372,13 @@ struct ProgressViewScreen: View {
                         AxisGridLine()
                             .foregroundStyle(Color.wwDarkAccent.opacity(0.1))
                         AxisValueLabel()
+                            .font(.caption2)
                             .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
                     }
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .wwCard()
     }
 
@@ -390,7 +386,7 @@ struct ProgressViewScreen: View {
 
     private var caloriesCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Calorieën vs. doel")
+            Text("Calorieën")
                 .font(.headline)
                 .foregroundStyle(Color.wwDarkAccent)
 
@@ -410,28 +406,6 @@ struct ProgressViewScreen: View {
                         )
                         .foregroundStyle(Color.wwOrange.opacity(0.7))
                         .cornerRadius(3)
-                    }
-
-                    ForEach(dailyTargetCalories.sorted(by: { $0.key < $1.key }), id: \.key) { day, target in
-                        LineMark(
-                            x: .value("Datum", day, unit: .day),
-                            y: .value("Doel", target)
-                        )
-                        .foregroundStyle(Color.wwPurple)
-                        .lineStyle(StrokeStyle(lineWidth: 2))
-                        .interpolationMethod(.stepCenter)
-                    }
-
-                    ForEach(Array(trainingDays), id: \.self) { day in
-                        PointMark(
-                            x: .value("Training", day, unit: .day),
-                            y: .value("Marker", 0)
-                        )
-                        .symbol {
-                            Image(systemName: "flame.fill")
-                                .font(.system(size: 8))
-                                .foregroundStyle(Color.wwOrange)
-                        }
                     }
                 }
                 .frame(height: 180)
@@ -459,9 +433,9 @@ struct ProgressViewScreen: View {
     // MARK: - Eiwit-trend
 
     private var proteinCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Eiwit-trend")
-                .font(.headline)
+                .font(.subheadline.bold())
                 .foregroundStyle(Color.wwDarkAccent)
 
             if dailyProtein.isEmpty {
@@ -491,12 +465,13 @@ struct ProgressViewScreen: View {
                         .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
                     }
                 }
-                .frame(height: 160)
+                .frame(height: 130)
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
+                    AxisMarks(values: .stride(by: .day, count: compactAxisStride)) { _ in
                         AxisGridLine()
                             .foregroundStyle(Color.wwDarkAccent.opacity(0.15))
                         AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                            .font(.caption2)
                             .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
                     }
                 }
@@ -505,41 +480,16 @@ struct ProgressViewScreen: View {
                         AxisGridLine()
                             .foregroundStyle(Color.wwDarkAccent.opacity(0.1))
                         AxisValueLabel()
+                            .font(.caption2)
                             .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
                     }
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .wwCard()
     }
 
-    // MARK: - Logging-compliance
-
-    private var complianceCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(loggedDays.count == totalDaysInRange ? Color.wwTeal : Color.wwOrange)
-
-                Text("Logging")
-                    .font(.headline)
-                    .foregroundStyle(Color.wwDarkAccent)
-
-                Spacer()
-
-                Text(loggingComplianceText)
-                    .font(.subheadline.bold())
-                    .foregroundStyle(Color.wwDarkAccent)
-            }
-
-            if Double(loggedDays.count) / Double(max(totalDaysInRange, 1)) < 0.7 {
-                Text("Minder dan 70% van de dagen gelogd. Adviezen op basis van deze periode zijn minder betrouwbaar.")
-                    .font(.caption)
-                    .foregroundStyle(Color.wwCoral)
-            }
-        }
-        .wwCard()
-    }
 }
 
 //  ProgressView.swift

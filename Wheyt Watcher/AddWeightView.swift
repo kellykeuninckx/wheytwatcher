@@ -8,10 +8,16 @@ struct AddWeightView: View {
     let profile: UserProfile
 
     @State private var weightKg: Double
+    @State private var bodyFatText: String
+    @State private var activityLevel: ActivityLevel
 
     init(profile: UserProfile) {
         self.profile = profile
         _weightKg = State(initialValue: profile.currentWeightKg)
+        _bodyFatText = State(
+            initialValue: profile.estimatedBodyFatPercentage.map { String($0) } ?? ""
+        )
+        _activityLevel = State(initialValue: profile.activityLevel)
     }
 
     var body: some View {
@@ -25,6 +31,22 @@ struct AddWeightView: View {
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
                         Text("kg")
+                    }
+                }
+
+                Section("Vetpercentage (optioneel)") {
+                    HStack {
+                        TextField("bv. 18", text: $bodyFatText)
+                            .keyboardType(.decimalPad)
+                        Text("%")
+                    }
+                }
+
+                Section("Activiteit") {
+                    Picker("Activiteit", selection: $activityLevel) {
+                        ForEach(ActivityLevel.allCases) { option in
+                            Text(option.rawValue).tag(option)
+                        }
                     }
                 }
             }
@@ -47,9 +69,16 @@ struct AddWeightView: View {
 
     private func save() {
         profile.currentWeightKg = weightKg
+        profile.activityLevel = activityLevel
+
+        if let bodyFat = Double(bodyFatText.replacingOccurrences(of: ",", with: ".")) {
+            profile.estimatedBodyFatPercentage = bodyFat
+        }
 
         let log = WeightLog(date: Date(), weightKg: weightKg)
         modelContext.insert(log)
+
+        try? modelContext.save()
 
         dismiss()
     }
@@ -60,4 +89,3 @@ struct AddWeightView: View {
 //
 //  Created by Kelly Keuninckx on 05/07/2026.
 //
-

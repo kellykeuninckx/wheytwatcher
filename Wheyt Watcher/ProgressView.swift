@@ -208,7 +208,7 @@ struct ProgressViewScreen: View {
 
                     ForEach(Array(trainingDays), id: \.self) { day in
                         RuleMark(x: .value("Training", day, unit: .day))
-                            .foregroundStyle(Color.wwOrange.opacity(0.25))
+                            .foregroundStyle(Color.wwOrange.opacity(0.45))
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                     }
                 }
@@ -216,7 +216,17 @@ struct ProgressViewScreen: View {
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                         AxisGridLine()
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.15))
                         AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks { _ in
+                        AxisGridLine()
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.1))
+                        AxisValueLabel()
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
                     }
                 }
             }
@@ -255,7 +265,7 @@ struct ProgressViewScreen: View {
                             x: .value("Datum", day, unit: .day),
                             y: .value("Doel", target)
                         )
-                        .foregroundStyle(Color.wwDarkAccent.opacity(0.7))
+                        .foregroundStyle(Color.wwPurple)
                         .lineStyle(StrokeStyle(lineWidth: 2))
                         .interpolationMethod(.stepCenter)
                     }
@@ -276,7 +286,17 @@ struct ProgressViewScreen: View {
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                         AxisGridLine()
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.15))
                         AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks { _ in
+                        AxisGridLine()
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.1))
+                        AxisValueLabel()
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
                     }
                 }
             }
@@ -315,7 +335,7 @@ struct ProgressViewScreen: View {
                             x: .value("Datum", day, unit: .day),
                             y: .value("Doel", target)
                         )
-                        .foregroundStyle(Color.wwDarkAccent.opacity(0.4))
+                        .foregroundStyle(Color.wwPurple.opacity(0.6))
                         .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
                     }
                 }
@@ -323,7 +343,17 @@ struct ProgressViewScreen: View {
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                         AxisGridLine()
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.15))
                         AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks { _ in
+                        AxisGridLine()
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.1))
+                        AxisValueLabel()
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
                     }
                 }
             }
@@ -360,6 +390,11 @@ struct ProgressViewScreen: View {
     }
 }
 
+//  ProgressView.swift
+//  Wheyt Watcher
+//
+//  Created by Kelly Keuninckx on 06/07/2026.
+//
 //  ProgressView.swift
 //  Wheyt Watcher
 //

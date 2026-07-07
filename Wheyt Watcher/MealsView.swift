@@ -52,8 +52,8 @@ struct MealsView: View {
                                                 .foregroundStyle(Color.wwSecondaryText)
 
                                             Text("\(Int(meal.items.reduce(0) { $0 + $1.calories })) kcal")
-                                                .font(.caption)
-                                                .foregroundStyle(Color.wwSecondaryText)
+                                                .font(.subheadline)
+                                                   .foregroundStyle(Color.wwSecondaryText)
 
                                         }
 
@@ -75,6 +75,7 @@ struct MealsView: View {
 
                         }
                         .padding()
+                    
 
                     }
                         .navigationTitle("Maaltijden")

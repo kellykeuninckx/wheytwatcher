@@ -24,7 +24,7 @@ struct MainTabView: View {
                     Label("Logboek", systemImage: "list.bullet.clipboard")
                 }
 
-            ProgressViewScreen()
+            ProgressViewScreen(profile: profile)
                 .tabItem {
                     Label("Progressie", systemImage: "chart.line.uptrend.xyaxis")
                 }
@@ -37,4 +37,3 @@ struct MainTabView: View {
 //
 //  Created by Kelly Keuninckx on 05/07/2026.
 //
-

@@ -144,6 +144,9 @@ final class UserProfile {
     var activityLevel: ActivityLevel
     var createdAt: Date
 
+    @Relationship(deleteRule: .cascade, inverse: \GoalPeriod.profile)
+    var goalPeriods: [GoalPeriod] = []
+
     init(
         name: String,
         age: Int,
@@ -165,6 +168,145 @@ final class UserProfile {
         self.goalPace = goalPace
         self.activityLevel = activityLevel
         self.createdAt = Date()
+    }
+
+    /// De doelperiode waar de gebruiker op dit moment in zit (indien aanwezig).
+    var activeGoalPeriod: GoalPeriod? {
+        goalPeriods.first { $0.isActive }
+    }
+
+    /// Afgeronde/gewisselde doelperiodes, nieuwste eerst — voor geschiedenis.
+    var pastGoalPeriods: [GoalPeriod] {
+        goalPeriods
+            .filter { !$0.isActive }
+            .sorted { $0.startDate > $1.startDate }
+    }
+
+    /// Rondt de actieve periode af (indien aanwezig) en start een nieuwe.
+    /// Wordt gebruikt vanuit ProfileView en vanuit de "periode afgelopen"-flow.
+    func startNewGoalPeriod(mode: GoalMode, pace: GoalPace, durationWeeks: Int) {
+        if let current = activeGoalPeriod {
+            current.isActive = false
+            current.completedAt = Date()
+        }
+
+        self.goalMode = mode
+        self.goalPace = pace
+
+        let newPeriod = GoalPeriod(
+            startDate: Date(),
+            durationWeeks: durationWeeks,
+            goalMode: mode,
+            goalPace: pace,
+            isActive: true
+        )
+        newPeriod.profile = self
+        goalPeriods.append(newPeriod)
+    }
+}
+
+@Model
+final class GoalPeriod {
+    var startDate: Date
+    var durationWeeks: Int
+    var goalMode: GoalMode
+    var goalPace: GoalPace
+    var isActive: Bool
+    var completedAt: Date?
+    var profile: UserProfile?
+
+    init(
+        startDate: Date,
+        durationWeeks: Int,
+        goalMode: GoalMode,
+        goalPace: GoalPace,
+        isActive: Bool = true
+    ) {
+        self.startDate = startDate
+        self.durationWeeks = durationWeeks
+        self.goalMode = goalMode
+        self.goalPace = goalPace
+        self.isActive = isActive
+        self.completedAt = nil
+    }
+
+    var endDate: Date {
+        Calendar.current.date(
+            byAdding: .weekOfYear,
+            value: durationWeeks,
+            to: Calendar.current.startOfDay(for: startDate)
+        ) ?? startDate
+    }
+
+    /// 1-based weeknummer waarin de gebruiker nu zit, geclampt tussen 1 en durationWeeks.
+    var currentWeekNumber: Int {
+        let days = Calendar.current.dateComponents(
+            [.day],
+            from: Calendar.current.startOfDay(for: startDate),
+            to: Calendar.current.startOfDay(for: Date())
+        ).day ?? 0
+
+        return min(max(days / 7 + 1, 1), durationWeeks)
+    }
+
+    var weeksRemaining: Int {
+        max(durationWeeks - currentWeekNumber, 0)
+    }
+
+    var hasEnded: Bool {
+        Calendar.current.startOfDay(for: Date()) >= Calendar.current.startOfDay(for: endDate)
+    }
+}
+
+/// Geadviseerde en standaard-duur per doel/tempo-combinatie, met onderbouwing voor de gebruiker.
+/// Dit zijn algemene, in de fitnesswereld gangbare vuistregels (geen individueel medisch advies) —
+/// bewust op één plek verzameld zodat je de getallen/teksten makkelijk kan bijstellen.
+enum GoalDurationAdvisor {
+
+    static func recommendedWeeks(for mode: GoalMode, pace: GoalPace) -> Int {
+        switch mode {
+        case .maintenance:
+            return 12
+        case .cut:
+            switch pace {
+            case .conservative: return 12
+            case .normal: return 8
+            case .aggressive: return 6
+            }
+        case .bulk:
+            switch pace {
+            case .conservative: return 16
+            case .normal: return 12
+            case .aggressive: return 8
+            }
+        }
+    }
+
+    static func adviceText(for mode: GoalMode, pace: GoalPace) -> String {
+        switch mode {
+        case .maintenance:
+            return "Bij onderhoud houden we standaard 12 weken aan. Zo verzamelt de app genoeg data om je trend te tonen, en evalueren we daarna of je wil bijsturen."
+
+        case .cut:
+            switch pace {
+            case .conservative:
+                return "Een voorzichtige cut duurt meestal 10–12 weken. Het kleinere calorietekort beschermt je spiermassa beter, maar vraagt meer geduld."
+            case .normal:
+                return "Een normale cut duurt meestal 8 weken — voor de meeste mensen een goede balans tussen tempo en het behouden van spiermassa."
+            case .aggressive:
+                return "Een agressieve cut duurt meestal 6 weken. Door het grotere tekort gaat het sneller, maar we raden af dit langer vol te houden: het risico op spierverlies en terugval neemt toe."
+            }
+
+        case .bulk:
+            switch pace {
+            case .conservative:
+                return "Een voorzichtige bulk duurt meestal 14–16 weken. Langzaam aankomen beperkt vetopslag, maar kost meer tijd."
+            case .normal:
+                return "Een normale bulk duurt meestal 10–12 weken — een gangbare balans tussen spiergroei en vetopslag."
+            case .aggressive:
+                return "Een agressieve bulk duurt meestal 8 weken. Je komt sneller aan, maar met meer kans op overtollig vet — hou dit kort en evalueer daarna opnieuw."
+            }
+        }
     }
 }
 
@@ -353,4 +495,3 @@ final class DailyTargetSnapshot {
 //
 //  Created by Kelly Keuninckx on 03/07/2026.
 //
-

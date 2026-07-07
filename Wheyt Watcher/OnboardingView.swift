@@ -23,6 +23,9 @@ struct OnboardingView: View {
 
     @State private var activityLevel: ActivityLevel = .light
 
+    @State private var durationWeeks: Int = GoalDurationAdvisor.recommendedWeeks(for: .maintenance, pace: .normal)
+    @State private var showingDurationInfo = false
+
     var body: some View {
 
         NavigationStack {
@@ -144,6 +147,37 @@ struct OnboardingView: View {
 
                     }
 
+                    Stepper(
+                        "Duur: \(durationWeeks) weken",
+                        value: $durationWeeks,
+                        in: 2...52
+                    )
+
+                    HStack(spacing: 6) {
+
+                        Text("Advies: \(GoalDurationAdvisor.recommendedWeeks(for: goalMode, pace: goalPace)) weken")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        Button {
+                            showingDurationInfo = true
+                        } label: {
+                            Image(systemName: "info.circle")
+                        }
+                        .buttonStyle(.plain)
+
+                    }
+                    .popover(isPresented: $showingDurationInfo) {
+                        Text(GoalDurationAdvisor.adviceText(for: goalMode, pace: goalPace))
+                            .font(.subheadline)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding()
+                            .frame(width: 280)
+                            .presentationCompactAdaptation(.popover)
+                    }
+
                 }
 
                 Section {
@@ -171,6 +205,12 @@ struct OnboardingView: View {
             }
             .navigationTitle("Profiel")
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: goalMode) {
+                durationWeeks = GoalDurationAdvisor.recommendedWeeks(for: goalMode, pace: goalPace)
+            }
+            .onChange(of: goalPace) {
+                durationWeeks = GoalDurationAdvisor.recommendedWeeks(for: goalMode, pace: goalPace)
+            }
 
         }
 
@@ -220,6 +260,17 @@ struct OnboardingView: View {
 
         modelContext.insert(firstWeightLog)
 
+        let initialGoalPeriod = GoalPeriod(
+            startDate: Date(),
+            durationWeeks: durationWeeks,
+            goalMode: goalMode,
+            goalPace: goalPace,
+            isActive: true
+        )
+        initialGoalPeriod.profile = profile
+
+        modelContext.insert(initialGoalPeriod)
+
     }
 
 }
@@ -228,4 +279,3 @@ struct OnboardingView: View {
 //
 //  Created by Kelly Keuninckx on 05/07/2026.
 //
-

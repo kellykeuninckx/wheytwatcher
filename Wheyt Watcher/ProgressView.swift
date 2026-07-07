@@ -4,6 +4,8 @@ import Charts
 
 struct ProgressViewScreen: View {
 
+    let profile: UserProfile
+
     @Query(sort: \WeightLog.date) private var weightLogs: [WeightLog]
     @Query(sort: \FoodLogEntry.date) private var foodEntries: [FoodLogEntry]
     @Query(sort: \TrainingSession.date) private var trainings: [TrainingSession]
@@ -96,7 +98,9 @@ struct ProgressViewScreen: View {
         return days
     }
 
-
+    private var loggingComplianceText: String {
+        "\(loggedDays.count)/\(totalDaysInRange) dagen gelogd"
+    }
 
     // MARK: - Gewichtstrend (kleinste-kwadraten regressie)
 
@@ -135,23 +139,11 @@ struct ProgressViewScreen: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         rangePicker
-                        coachCard
-                        
-                        LazyVGrid(
-                            columns: [
-                                GridItem(.flexible()),
-                                GridItem(.flexible())
-                            ],
-                            spacing: 16
-                        ) {
-
-                            weightCard
-                            proteinCard
-                            caloriesCard
-
-                        }
-                        
-                        
+                        progressCoachCard
+                        weightCard
+                        caloriesCard
+                        proteinCard
+                        complianceCard
                     }
                     .padding(.horizontal, 18)
                     .padding(.bottom, 24)
@@ -159,6 +151,155 @@ struct ProgressViewScreen: View {
             }
             .navigationTitle("Progressie")
         }
+    }
+
+    // MARK: - Coach-kaart (1 roterend bericht per dag)
+
+    private enum CoachMessageType: Int, CaseIterable {
+        case traject, streak, voeding, gewicht, training
+    }
+
+    private var dailyRotationIndex: Int {
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 0
+        return dayOfYear % CoachMessageType.allCases.count
+    }
+
+    private var coachMessage: (icon: String, text: String)? {
+        let order = CoachMessageType.allCases
+        for offset in 0..<order.count {
+            let type = order[(dailyRotationIndex + offset) % order.count]
+            if let message = coachMessage(for: type) {
+                return message
+            }
+        }
+        return nil
+    }
+
+    private func coachMessage(for type: CoachMessageType) -> (icon: String, text: String)? {
+        switch type {
+
+        case .traject:
+            guard let period = profile.activeGoalPeriod else { return nil }
+            return ("🎯", "Week \(period.currentWeekNumber) van \(period.durationWeeks), je ligt op schema.")
+
+        case .streak:
+            guard loggingStreak > 0 else { return nil }
+            return ("🔥", "Je hebt al \(loggingStreak) \(loggingStreak == 1 ? "dag" : "dagen") op rij gelogd.")
+
+        case .voeding:
+            guard let adherence = proteinAdherenceThisWeek, adherence.total > 0 else { return nil }
+            return ("🥩", "Je haalde deze week \(adherence.met) van de \(adherence.total) dagen je eiwitdoel.")
+
+        case .gewicht:
+            guard let rate = weeklyWeightChangeRate, abs(rate) >= 0.05 else { return nil }
+            let verb = rate < 0 ? "verliest" : "wint"
+            return ("⚖️", "Je \(verb) gemiddeld \(formattedWeeklyRate(rate)) kg per week.")
+
+        case .training:
+            guard trainingsThisWeekCount > 0 else { return nil }
+            return ("🏋️", "Je trainde deze week \(trainingsThisWeekCount) keer.")
+
+        }
+    }
+
+    private var progressCoachCard: some View {
+        Group {
+            if let message = coachMessage {
+                HStack(alignment: .top, spacing: 10) {
+                    Text(message.icon)
+                        .font(.title3)
+
+                    Text(message.text)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.wwDarkAccent)
+                }
+                .wwCard()
+            }
+        }
+    }
+
+    private var currentWeekStart: Date {
+        Calendar.current.date(
+            byAdding: .day,
+            value: -6,
+            to: Calendar.current.startOfDay(for: Date())
+        ) ?? Calendar.current.startOfDay(for: Date())
+    }
+
+    private var loggingStreak: Int {
+        let loggedDaysSet = Set(foodEntries.map { Calendar.current.startOfDay(for: $0.date) })
+        var streak = 0
+        var day = Calendar.current.startOfDay(for: Date())
+
+        while loggedDaysSet.contains(day) {
+            streak += 1
+            guard let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: day) else { break }
+            day = previousDay
+        }
+
+        return streak
+    }
+
+    private var proteinAdherenceThisWeek: (met: Int, total: Int)? {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        var met = 0
+        var total = 0
+        var day = currentWeekStart
+
+        while day <= today {
+            let dayProtein = foodEntries
+                .filter { calendar.isDate($0.date, inSameDayAs: day) }
+                .reduce(0) { $0 + $1.proteinGrams }
+
+            if let targetProtein = snapshots.first(where: { calendar.isDate($0.date, inSameDayAs: day) })?.proteinGrams,
+               targetProtein > 0 {
+                total += 1
+                if dayProtein >= targetProtein {
+                    met += 1
+                }
+            }
+
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+            day = nextDay
+        }
+
+        return total > 0 ? (met, total) : nil
+    }
+
+    private var trainingsThisWeekCount: Int {
+        trainings.filter { $0.date >= currentWeekStart }.count
+    }
+
+    private var weeklyWeightChangeRate: Double? {
+        let sixWeeksAgo = Calendar.current.date(byAdding: .day, value: -42, to: Date()) ?? Date.distantPast
+        let recentWeights = weightLogs.filter { $0.date >= sixWeeksAgo }
+
+        guard recentWeights.count >= 2, let referenceDate = recentWeights.first?.date else { return nil }
+
+        let xs = recentWeights.map { $0.date.timeIntervalSince(referenceDate) / 86400 }
+        let ys = recentWeights.map { $0.weightKg }
+
+        let n = Double(xs.count)
+        let sumX = xs.reduce(0, +)
+        let sumY = ys.reduce(0, +)
+        let sumXY = zip(xs, ys).reduce(0) { $0 + $1.0 * $1.1 }
+        let sumXX = xs.reduce(0) { $0 + $1 * $1 }
+
+        let denominator = n * sumXX - sumX * sumX
+        guard denominator != 0 else { return nil }
+
+        let slopePerDay = (n * sumXY - sumX * sumY) / denominator
+        return slopePerDay * 7
+    }
+
+    private func formattedWeeklyRate(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "nl_NL")
+        formatter.minimumFractionDigits = 1
+        formatter.maximumFractionDigits = 1
+        return formatter.string(from: NSNumber(value: abs(value))) ?? String(format: "%.1f", abs(value))
     }
 
     // MARK: - Periode-kiezer
@@ -223,7 +364,7 @@ struct ProgressViewScreen: View {
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                     }
                 }
-                .frame(height: 120)
+                .frame(height: 180)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                         AxisGridLine()
@@ -293,7 +434,7 @@ struct ProgressViewScreen: View {
                         }
                     }
                 }
-                .frame(height: 120)
+                .frame(height: 180)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                         AxisGridLine()
@@ -350,7 +491,7 @@ struct ProgressViewScreen: View {
                         .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
                     }
                 }
-                .frame(height: 120)
+                .frame(height: 160)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                         AxisGridLine()
@@ -372,71 +513,32 @@ struct ProgressViewScreen: View {
         .wwCard()
     }
 
-    // MARK: - Logging-coach
+    // MARK: - Logging-compliance
 
-    private var currentLoggingStreak: Int {
-
-        var streak = 0
-        var currentDate = Calendar.current.startOfDay(for: Date())
-
-        while loggedDays.contains(currentDate) {
-
-            streak += 1
-
-            guard let previousDay = Calendar.current.date(
-                byAdding: .day,
-                value: -1,
-                to: currentDate
-            ) else { break }
-
-            currentDate = previousDay
-
-        }
-
-        return streak
-
-    }
-
-    private var coachMessage: String {
-
-        if currentLoggingStreak >= 7 {
-            return "🔥 Je hebt al \(currentLoggingStreak) dagen op rij gelogd. Fantastisch bezig!"
-        }
-
-        if currentLoggingStreak >= 3 {
-            return "💪 Je bent al \(currentLoggingStreak) dagen consequent aan het loggen. Ga zo door!"
-        }
-
-        if currentLoggingStreak >= 1 {
-            return "👏 Mooie start! Elke dag loggen geeft de beste inzichten."
-        }
-
-        return "📈 Begin vandaag met loggen om je voortgang goed te kunnen volgen."
-
-    }
-    
-    private var coachCard: some View {
-
-        VStack(alignment: .leading, spacing: 12) {
-
+    private var complianceCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(loggedDays.count == totalDaysInRange ? Color.wwTeal : Color.wwOrange)
 
-                Image(systemName: "figure.strengthtraining.traditional")
-                    .foregroundStyle(Color.wwTeal)
-
-                Text("Coach")
+                Text("Logging")
                     .font(.headline)
                     .foregroundStyle(Color.wwDarkAccent)
 
+                Spacer()
+
+                Text(loggingComplianceText)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Color.wwDarkAccent)
             }
 
-            Text(coachMessage)
-                .font(.subheadline)
-                .foregroundStyle(Color.wwSecondaryText)
-
+            if Double(loggedDays.count) / Double(max(totalDaysInRange, 1)) < 0.7 {
+                Text("Minder dan 70% van de dagen gelogd. Adviezen op basis van deze periode zijn minder betrouwbaar.")
+                    .font(.caption)
+                    .foregroundStyle(Color.wwCoral)
+            }
         }
         .wwCard()
-
     }
 }
 
@@ -445,9 +547,3 @@ struct ProgressViewScreen: View {
 //
 //  Created by Kelly Keuninckx on 06/07/2026.
 //
-//  ProgressView.swift
-//  Wheyt Watcher
-//
-//  Created by Kelly Keuninckx on 06/07/2026.
-//
-

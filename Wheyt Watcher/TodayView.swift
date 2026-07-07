@@ -4,15 +4,6 @@ import SwiftData
 struct TodayView: View {
     let profile: UserProfile
 
-    @State private var selectedGoalMode: GoalMode
-    @State private var selectedGoalPace: GoalPace
-
-    init(profile: UserProfile) {
-        self.profile = profile
-        _selectedGoalMode = State(initialValue: profile.goalMode)
-        _selectedGoalPace = State(initialValue: profile.goalPace)
-    }
-
     @Environment(\.modelContext) private var modelContext
     @Query private var foodEntries: [FoodLogEntry]
     @Query private var trainings: [TrainingSession]
@@ -29,6 +20,7 @@ struct TodayView: View {
     @State private var showingLogbook = false
     @State private var showingProfile = false
     @State private var showingQuickAddMenu = false
+    @State private var showingGoalPeriodEndedSheet = false
 
     @AppStorage("wwIsDarkTheme") private var isDarkTheme: Bool = true
 
@@ -48,8 +40,8 @@ struct TodayView: View {
     private var target: MacroTarget {
         MacroCalculator.calculate(
             for: profile,
-            goalMode: selectedGoalMode,
-            goalPace: selectedGoalPace,
+            goalMode: profile.goalMode,
+            goalPace: profile.goalPace,
             extraTrainingCalories: todaysTrainingCalories
         )
     }
@@ -185,17 +177,63 @@ struct TodayView: View {
                 ProfileView(profile: profile)
 
             }
+            .sheet(isPresented: $showingGoalPeriodEndedSheet) {
+                EditGoalSheet(
+                    profile: profile,
+                    completionMessage: goalCompletionMessage
+                )
+            }
             .onAppear {
                 if isToday {
                     ensureTodaySnapshotExists()
                 }
+                checkGoalPeriodEnded()
             }
             .onChange(of: todaysTrainingCalories) {
                 if isToday {
                     upsertTodaySnapshot()
                 }
             }
+            .onChange(of: profile.goalMode) {
+                if isToday {
+                    upsertTodaySnapshot()
+                }
+            }
+            .onChange(of: profile.goalPace) {
+                if isToday {
+                    upsertTodaySnapshot()
+                }
+            }
         }
+    }
+
+    // MARK: - Doelperiode afgerond
+
+    private func checkGoalPeriodEnded() {
+        if let period = profile.activeGoalPeriod, period.hasEnded {
+            showingGoalPeriodEndedSheet = true
+        }
+    }
+
+    private var goalCompletionMessage: String {
+        let weeks = profile.activeGoalPeriod?.durationWeeks ?? 0
+        return "🎉 Goed bezig! Je hebt je \(profile.goalMode.rawValue.lowercased()) van \(weeks) weken volgehouden. Kies hieronder hoe je verder wil — nog een periode in hetzelfde doel, of iets nieuws."
+    }
+
+    // MARK: - Doel-voortgang (read-only, wisselen doe je via Profiel)
+
+    private var goalProgressLabel: some View {
+        Group {
+            if let period = profile.activeGoalPeriod {
+                Text("\(profile.goalMode.rawValue) — week \(period.currentWeekNumber) van \(period.durationWeeks), nog \(period.weeksRemaining) \(period.weeksRemaining == 1 ? "week" : "weken") te gaan")
+            } else {
+                Text(profile.goalMode.rawValue)
+            }
+        }
+        .font(.caption.bold())
+        .foregroundStyle(Color.wwTeal)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Header
@@ -228,55 +266,7 @@ struct TodayView: View {
                     .font(.subheadline)
                     .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
                 
-                HStack(spacing: 8) {
-
-                    Menu {
-
-                        ForEach(GoalMode.allCases) { mode in
-                            Button(mode.rawValue) {
-                                selectedGoalMode = mode
-
-                                if isToday {
-                                    upsertTodaySnapshot()
-                                }                            }
-                        }
-
-                    } label: {
-
-                        Label(selectedGoalMode.rawValue, systemImage: "chevron.down")
-                            .font(.caption.bold())
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color.wwAqua.opacity(0.18))
-                            .foregroundStyle(Color.wwTeal)
-                            .clipShape(Capsule())
-
-                    }
-
-                    Menu {
-
-                        ForEach(GoalPace.allCases) { pace in
-                            Button(pace.rawValue) {
-                                selectedGoalPace = pace
-
-                                if isToday {
-                                    upsertTodaySnapshot()
-                                }
-                            }
-                        }
-
-                    } label: {
-
-                        Label(selectedGoalPace.rawValue, systemImage: "chevron.down")
-                            .font(.caption.bold())
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color.orange.opacity(0.15))
-                            .foregroundStyle(.orange)
-                            .clipShape(Capsule())
-
-                    }
-                }
+                goalProgressLabel
             }
             
             Spacer()
@@ -316,10 +306,10 @@ struct TodayView: View {
             QuickAddOption(icon: "doc.on.doc", title: "Kopieer product") {
                 showingCopyMeal = true
             },
-            QuickAddOption(icon: "star.fill", title: "Voeg favoriet toe") {
+            QuickAddOption(icon: "star.fill", title: "Favorieten") {
                 showingFavorites = true
             },
-            QuickAddOption(icon: "fork.knife", title: "Voeg maaltijd toe") {
+            QuickAddOption(icon: "fork.knife", title: "Maaltijden") {
                 showingMeals = true
             },
             QuickAddOption(icon: "barcode.viewfinder", title: "Scan barcode") {
@@ -328,7 +318,7 @@ struct TodayView: View {
             QuickAddOption(icon: "square.and.pencil", title: "Voeg handmatig toe") {
                 showingAddFood = true
             },
-            QuickAddOption(icon: "scalemass", title: "Voer gewicht in") {
+            QuickAddOption(icon: "scalemass", title: "Gewicht invoeren") {
                 showingAddWeight = true
             }
         ]
@@ -724,8 +714,8 @@ struct TodayView: View {
 
     private func upsertTodaySnapshot() {
         if let existing = snapshots.first(where: { Calendar.current.isDateInToday($0.date) }) {
-            existing.goalMode = selectedGoalMode
-            existing.goalPace = selectedGoalPace
+            existing.goalMode = profile.goalMode
+            existing.goalPace = profile.goalPace
             existing.calories = target.calories
             existing.proteinGrams = target.proteinGrams
             existing.carbsGrams = target.carbsGrams
@@ -735,8 +725,8 @@ struct TodayView: View {
         } else {
             let snapshot = DailyTargetSnapshot(
                 date: Date(),
-                goalMode: selectedGoalMode,
-                goalPace: selectedGoalPace,
+                goalMode: profile.goalMode,
+                goalPace: profile.goalPace,
                 calories: target.calories,
                 proteinGrams: target.proteinGrams,
                 carbsGrams: target.carbsGrams,

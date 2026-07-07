@@ -6,7 +6,7 @@ struct RingProgressView: View {
     let target: Double
     let unit: String
     let gradient: LinearGradient
-    var lineWidth: CGFloat = 16
+    var lineWidth: CGFloat = 14
     var titleFont: Font = .caption
     var valueFont: Font = .title3.bold()
     var showLabels: Bool = true
@@ -87,7 +87,7 @@ struct CompactRingView: View {
     }
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 3) {
             ZStack {
                 Circle()
                     .stroke(
@@ -104,10 +104,10 @@ struct CompactRingView: View {
                     .rotationEffect(.degrees(-90))
 
                 Text("\(current.roundedInt)")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.wwDarkAccent)
             }
-            .frame(width: 52, height: 52)
+            .frame(width: 46, height: 46)
             
             Text(title)
                 .font(.caption2)

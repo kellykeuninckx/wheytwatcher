@@ -27,6 +27,7 @@ struct TodayView: View {
     @State private var showingMeals = false
     @State private var showingBarcodeScanner = false
     @State private var showingLogbook = false
+    @State private var showingProfile = false
 
 
     private var todaysFood: [FoodLogEntry] {
@@ -88,7 +89,21 @@ struct TodayView: View {
 
         return "Je ligt goed op schema. Blijf zo doorgaan!"
     }
+    
+    private var greeting: String {
 
+        let hour = Calendar.current.component(.hour, from: Date())
+
+        switch hour {
+        case 5..<12:
+            return "Goedemorgen"
+        case 12..<18:
+            return "Goedemiddag"
+        default:
+            return "Goedenavond"
+        }
+
+    }
     var body: some View {
         NavigationStack {
             ZStack {
@@ -100,14 +115,15 @@ struct TodayView: View {
                         
                         dateNavigator
                         
+                        coachCard
+                        
                         caloriesCard
                         
                         macrosCard
                         
                         trainingCard
                         
-                        coachCard
-                        
+                    
                         if isToday {
                             actionButtons
                         }
@@ -143,6 +159,10 @@ struct TodayView: View {
             .sheet(isPresented: $showingAddWeight) {
                 AddWeightView(profile: profile)
             }
+            .sheet(isPresented: $showingProfile) {
+                ProfileView(profile: profile)
+
+            }
             .onAppear {
                 if isToday {
                     ensureTodaySnapshotExists()
@@ -161,6 +181,27 @@ struct TodayView: View {
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
+                Button {
+
+                    showingProfile = true
+
+                } label: {
+
+                    HStack(spacing: 6) {
+
+                        Text("\(greeting) \(profile.name) 👋")
+                            .font(.title2.bold())
+                            .foregroundStyle(Color.wwDarkAccent)
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.wwSecondaryText)
+
+                    }
+
+                }
+                .buttonStyle(.plain)
+                
                 Text("Track your macros. Guard your gains.")
                     .font(.subheadline)
                     .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
@@ -222,7 +263,7 @@ struct TodayView: View {
                 Button {
                     showingCopyMeal = true
                 } label: {
-                    Label("Kopieer", systemImage: "doc.on.doc")
+                    Label("Kopieer product", systemImage: "doc.on.doc")
                 }
                 
                 Button {
@@ -274,17 +315,17 @@ struct TodayView: View {
                 }
             } label: {
                 Image(systemName: "chevron.left")
-                    .font(.title3.bold())
+                    .font(.headline.weight(.bold))
                     .foregroundStyle(Color.wwTeal)
-                    .padding(10)
+                    .padding(4)
             }
             
             Spacer()
             
-            VStack(spacing: 2) {
+            VStack(spacing: 0) {
                 if isToday {
                     Text("Vandaag")
-                        .font(.headline)
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.wwDarkAccent)
                 } else {
                     Text(selectedDate, format: .dateTime.weekday(.wide))
@@ -307,7 +348,7 @@ struct TodayView: View {
                 Image(systemName: "chevron.right")
                     .font(.title3.bold())
                     .foregroundStyle(isToday ? Color.wwDarkAccent.opacity(0.2) : Color.wwTeal)
-                    .padding(10)
+                    .padding(4)
             }
             .disabled(isToday)
         }
@@ -317,12 +358,12 @@ struct TodayView: View {
     // MARK: - Calories Card
     
     private var caloriesCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Calorieën")
                 .font(.headline)
                 .foregroundStyle(Color.wwDarkAccent)
             
-            HStack(spacing: 20) {
+            HStack(spacing: 14) {
                 RingProgressView(
                     title: "",
                     current: totals.calories,
@@ -334,11 +375,11 @@ struct TodayView: View {
                     valueFont: .title2.bold(),
                     showLabels: true
                 )
-                .frame(width: 130, height: 130)
+                .frame(width: 118, height: 118)
                 
                 Spacer()
                 
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 10) {
                     CalorieInfoRow(
                         icon: "flame.fill",
                         label: "Verbrand",
@@ -371,7 +412,7 @@ struct TodayView: View {
     // MARK: - Macros Card
     
     private var macrosCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Macro's")
                 .font(.headline)
                 .foregroundStyle(Color.wwDarkAccent)
@@ -530,20 +571,14 @@ struct TodayView: View {
     
     private var coachCard: some View {
 
-        VStack(alignment: .leading, spacing: 12) {
+        HStack(alignment: .top, spacing: 10) {
 
-            HStack {
-
-                Image(systemName: "lightbulb.fill")
-                    .foregroundStyle(.yellow)
-
-                Text("Tip van vandaag")
-                    .font(.headline)
-
-            }
+            Image(systemName: "lightbulb.fill")
+                .foregroundStyle(.yellow)
+                .padding(.top, 2)
 
             Text(coachMessage)
-                .font(.subheadline)
+                .font(.footnote)
                 .foregroundStyle(Color.wwDarkAccent)
 
         }

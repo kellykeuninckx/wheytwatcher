@@ -135,10 +135,22 @@ struct ProgressViewScreen: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         rangePicker
-                        weightCard
-                        caloriesCard
-                        proteinCard
                         coachCard
+                        
+                        LazyVGrid(
+                            columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                            ],
+                            spacing: 16
+                        ) {
+
+                            weightCard
+                            proteinCard
+                            caloriesCard
+
+                        }
+                        
                         
                     }
                     .padding(.horizontal, 18)
@@ -211,7 +223,7 @@ struct ProgressViewScreen: View {
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                     }
                 }
-                .frame(height: 180)
+                .frame(height: 120)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                         AxisGridLine()
@@ -281,7 +293,7 @@ struct ProgressViewScreen: View {
                         }
                     }
                 }
-                .frame(height: 180)
+                .frame(height: 120)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                         AxisGridLine()
@@ -338,7 +350,7 @@ struct ProgressViewScreen: View {
                         .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
                     }
                 }
-                .frame(height: 160)
+                .frame(height: 120)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                         AxisGridLine()

@@ -68,25 +68,68 @@ struct TodayView: View {
     private var fiberRemaining: Double {
         max(target.fiberGrams - totals.fiber, 0)
     }
+
+    // MARK: - Tip van de dagdeel
+
+    private enum CoachMessageType: Int, CaseIterable {
+        case fiberClose, proteinClose, caloriesAlmostDone, caloriesPlenty, onTrack, generalTip
+    }
+
+    /// Per uur × dag-van-het-jaar, zodat de rotatie vaker wisselt (niet de hele ochtend hetzelfde
+    /// bericht) en toch elke dag een ander patroon volgt.
+    private var dagdeelRotationIndex: Int {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 0
+        return (dayOfYear * 24 + hour) % CoachMessageType.allCases.count
+    }
+
     private var coachMessage: String {
-
-        if fiberRemaining > 0 && fiberRemaining <= 5 {
-            return "Nog \(fiberRemaining.roundedInt) g vezels te gaan. Eén volkoren boterham of een appel is waarschijnlijk al genoeg."
+        let order = CoachMessageType.allCases
+        for offset in 0..<order.count {
+            let type = order[(dagdeelRotationIndex + offset) % order.count]
+            if let message = coachMessage(for: type) {
+                return message
+            }
         }
-
-        if proteinRemaining > 0 && proteinRemaining <= 30 {
-            return "Nog \(proteinRemaining.roundedInt) g eiwit. Een portie magere kwark of kipfilet brengt je waarschijnlijk al op je doel."
-        }
-
-        if caloriesRemaining > 500 {
-            return "Je hebt nog \(caloriesRemaining.roundedInt) kcal over. Genoeg ruimte voor een volledige maaltijd."
-        }
-
-        if caloriesRemaining <= 100 {
-            return "Je caloriedoel is bijna bereikt. Mooie dag!"
-        }
-
         return "Je ligt goed op schema. Blijf zo doorgaan!"
+    }
+
+    private func coachMessage(for type: CoachMessageType) -> String? {
+        switch type {
+
+        case .fiberClose:
+            guard fiberRemaining > 0, fiberRemaining <= 5 else { return nil }
+            return "Nog \(fiberRemaining.roundedInt) g vezels te gaan. \(fiberEquivalent(fiberRemaining))"
+
+        case .proteinClose:
+            guard proteinRemaining > 0, proteinRemaining <= 30 else { return nil }
+            return "Nog \(proteinRemaining.roundedInt) g eiwit te gaan. \(proteinEquivalent(proteinRemaining))"
+
+        case .caloriesAlmostDone:
+            guard caloriesRemaining <= 100 else { return nil }
+            return "Je caloriedoel is bijna bereikt. Mooie dag!"
+
+        case .caloriesPlenty:
+            guard caloriesRemaining > 500 else { return nil }
+            return "Je hebt nog \(caloriesRemaining.roundedInt) kcal over. Genoeg ruimte voor een volledige maaltijd."
+
+        case .onTrack:
+            return "Je ligt goed op schema. Blijf zo doorgaan!"
+
+        case .generalTip:
+            return NutritionTips.tip(for: Date())
+
+        }
+    }
+
+    private func proteinEquivalent(_ grams: Double) -> String {
+        let quarkGrams = (grams * 10).roundedInt
+        return "Dat is ongeveer \(quarkGrams) g magere kwark, of een kipfiletje."
+    }
+
+    private func fiberEquivalent(_ grams: Double) -> String {
+        let apples = max(Int((grams / 4).rounded()), 1)
+        return "Dat is ongeveer \(apples) \(apples == 1 ? "appel" : "appels")."
     }
     
     private var greeting: String {
@@ -921,6 +964,43 @@ struct AdaptiveCheckInSheet: View {
         case .onTrack(let message): return message
         case .suggestAdjustment(_, let reasoning): return reasoning
         }
+    }
+
+}
+
+// MARK: - Algemene voedingstips (database voor de "tip van de dagdeel")
+
+enum NutritionTips {
+
+    static let all: [String] = [
+        "Wist je dat 1 appel ongeveer 4 g vezels bevat?",
+        "Wist je dat 100 g kipfilet ongeveer 31 g eiwit bevat?",
+        "Wist je dat volkoren brood meer vezels bevat dan wit brood?",
+        "Wist je dat 1 ei ongeveer 6 g eiwit bevat?",
+        "Wist je dat peulvruchten zoals linzen rijk zijn aan zowel eiwit als vezels?",
+        "Wist je dat magere kwark een van de goedkoopste eiwitbronnen is?",
+        "Wist je dat een banaan ongeveer 3 g vezels bevat?",
+        "Wist je dat voldoende vezels je langer een verzadigd gevoel geven?",
+        "Wist je dat noten een goede bron van gezonde, onverzadigde vetten zijn?",
+        "Wist je dat 100 g Griekse yoghurt ongeveer 10 g eiwit bevat?",
+        "Wist je dat groenten met veel water, zoals komkommer, weinig calorieën kosten maar wel vullen?",
+        "Wist je dat havermout een goede combinatie van vezels én langzame koolhydraten is?",
+        "Wist je dat spieren tijdens rust groeien, niet tijdens de training zelf?",
+        "Wist je dat een dieetpauze na een lange cut je metabolisme kan helpen herstellen?",
+        "Wist je dat je gewicht van dag tot dag kan schommelen door water — de wekelijkse trend zegt veel meer dan één meting?",
+        "Wist je dat progressive overload (geleidelijk zwaarder trainen) de sleutel is tot spiergroei?",
+        "Wist je dat voldoende slaap net zo belangrijk is voor herstel als je voeding?",
+        "Wist je dat consistentie over weken en maanden belangrijker is dan perfectie op één dag?",
+        "Wist je dat krachttraining tijdens een cut helpt om je spiermassa te behouden?",
+        "Wist je dat een te agressief tekort vaker leidt tot terugval dan een gematigd tekort?"
+    ]
+
+    /// Kiest een tip op basis van uur + dag, zodat 'm ook binnen één dag al verschuift i.p.v. steeds
+    /// dezelfde tekst te tonen totdat de datum omslaat.
+    static func tip(for date: Date) -> String {
+        let hour = Calendar.current.component(.hour, from: date)
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: date) ?? 0
+        return all[(dayOfYear * 24 + hour) % all.count]
     }
 
 }

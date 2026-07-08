@@ -152,7 +152,7 @@ struct ProgressViewScreen: View {
     // MARK: - Coach-kaart (1 roterend bericht per dag)
 
     private enum CoachMessageType: Int, CaseIterable {
-        case traject, streak, voeding, gewicht, training
+        case traject, streak, voeding, gewicht, training, wandelen
     }
 
     private var dailyRotationIndex: Int {
@@ -189,11 +189,15 @@ struct ProgressViewScreen: View {
         case .gewicht:
             guard let rate = weeklyWeightChangeRate, abs(rate) >= 0.05 else { return nil }
             let verb = rate < 0 ? "verliest" : "wint"
-            return ("⚖️", "Je \(verb) gemiddeld \(formattedWeeklyRate(rate)) kg per week.")
+            return ("⚖️", "Je \(verb) gemiddeld \(formattedOneDecimal(rate)) kg per week.")
 
         case .training:
             guard trainingsThisWeekCount > 0 else { return nil }
             return ("🏋️", "Je trainde deze week \(trainingsThisWeekCount) keer.")
+
+        case .wandelen:
+            guard walkingHoursThisWeek > 0 else { return nil }
+            return ("🚶", "Je hebt deze week \(formattedOneDecimal(walkingHoursThisWeek)) uur gewandeld. \(walkingDistanceEquivalent(hours: walkingHoursThisWeek))")
 
         }
     }
@@ -268,7 +272,33 @@ struct ProgressViewScreen: View {
     }
 
     private var trainingsThisWeekCount: Int {
-        trainings.filter { $0.date >= currentWeekStart }.count
+        trainings.filter { $0.date >= currentWeekStart && $0.type != .walking }.count
+    }
+
+    private var walkingHoursThisWeek: Double {
+        let totalMinutes = trainings
+            .filter { $0.date >= currentWeekStart && $0.type == .walking }
+            .reduce(0) { $0 + $1.durationMinutes }
+        return Double(totalMinutes) / 60.0
+    }
+
+    /// Zet gewandelde uren om naar een leuke afstandsvergelijking, uitgaand van ~5 km/u.
+    private func walkingDistanceEquivalent(hours: Double) -> String {
+        let km = hours * 5.0
+
+        let milestones: [(maxKm: Double, text: String)] = [
+            (5, "Dat is ongeveer een rondje door de buurt."),
+            (15, "Dat is ongeveer de afstand tussen Utrecht en Amersfoort."),
+            (30, "Dat is ongeveer Den Haag naar Rotterdam."),
+            (50, "Dat is ongeveer van Scheveningen naar Noordwijk én terug."),
+            (80, "Dat is verder dan Amsterdam naar Utrecht én terug.")
+        ]
+
+        for milestone in milestones where km <= milestone.maxKm {
+            return milestone.text
+        }
+
+        return "Dat is verder dan een marathon — knap gedaan!"
     }
 
     private var weeklyWeightChangeRate: Double? {
@@ -293,7 +323,7 @@ struct ProgressViewScreen: View {
         return slopePerDay * 7
     }
 
-    private func formattedWeeklyRate(_ value: Double) -> String {
+    private func formattedOneDecimal(_ value: Double) -> String {
         let formatter = NumberFormatter()
         formatter.locale = Locale(identifier: "nl_NL")
         formatter.minimumFractionDigits = 1

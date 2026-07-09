@@ -697,7 +697,7 @@ struct TodayView: View {
                         icon: "target",
                         label: "Resterend",
                         value: "\(caloriesRemaining.roundedInt)",
-                        color: .wwBlue
+                        color: .wwAqua
                     )
                 }
             }

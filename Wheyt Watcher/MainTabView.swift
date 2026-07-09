@@ -1,57 +1,59 @@
 import SwiftUI
+import UIKit
 
 struct MainTabView: View {
     let profile: UserProfile
 
-    private enum Tab: Hashable {
-        case today, meals, favorites, logbook, progress
-    }
+    init(profile: UserProfile) {
+        self.profile = profile
 
-    @State private var selectedTab: Tab = .today
+        // SwiftUI's .tint() gets overridden entirely once a custom UITabBarAppearance is set —
+        // so both the active (selected) and inactive (normal) colors need to be configured here,
+        // in one place, rather than mixing .tint() with a partially-configured appearance.
+        let appearance = UITabBarAppearance()
+        appearance.configureWithDefaultBackground()
 
-    private var currentTint: Color {
-        switch selectedTab {
-        case .today: return .wwTeal
-        case .meals: return .wwOrange
-        case .favorites: return .wwCoral
-        case .logbook: return .wwAqua
-        case .progress: return .wwBlue
+        let activeColor = UIColor(Color.wwTeal)
+        let inactiveColor = UIColor(Color.wwMint.opacity(0.45))
+
+        for style in [appearance.stackedLayoutAppearance, appearance.inlineLayoutAppearance, appearance.compactInlineLayoutAppearance] {
+            style.selected.iconColor = activeColor
+            style.selected.titleTextAttributes = [.foregroundColor: activeColor]
+            style.normal.iconColor = inactiveColor
+            style.normal.titleTextAttributes = [.foregroundColor: inactiveColor]
         }
+
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
     }
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView {
             TodayView(profile: profile)
                 .tabItem {
                     Label("Vandaag", systemImage: "house.fill")
                 }
-                .tag(Tab.today)
 
             MealsView()
                 .tabItem {
                     Label("Maaltijden", systemImage: "fork.knife")
                 }
-                .tag(Tab.meals)
 
             FavoritesView()
                 .tabItem {
                     Label("Favorieten", systemImage: "heart.fill")
                 }
-                .tag(Tab.favorites)
 
             LogbookView()
                 .tabItem {
                     Label("Logboek", systemImage: "list.bullet.clipboard")
                 }
-                .tag(Tab.logbook)
 
             ProgressViewScreen(profile: profile)
                 .tabItem {
                     Label("Progressie", systemImage: "chart.line.uptrend.xyaxis")
                 }
-                .tag(Tab.progress)
         }
-        .tint(currentTint)
     }
 }
 //

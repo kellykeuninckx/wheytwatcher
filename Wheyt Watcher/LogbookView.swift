@@ -37,12 +37,16 @@ struct LogbookView: View {
         }
     }
 
-    private var sortedDays: [Date] {
-        groupedEntries.keys.sorted(by: >)
+    private var groupedTrainings: [Date: [TrainingSession]] {
+        Dictionary(grouping: trainings) {
+            Calendar.current.startOfDay(for: $0.date)
+        }
     }
 
-    private var sortedTrainings: [TrainingSession] {
-        trainings.sorted { $0.date > $1.date }
+    /// Alle dagen die óf voeding, óf training (óf allebei) bevatten — één samenhangend
+    /// dagoverzicht in plaats van twee losse, aaneengeplakte lijsten.
+    private var allDays: [Date] {
+        Set(groupedEntries.keys).union(groupedTrainings.keys).sorted(by: >)
     }
 
     var body: some View {
@@ -57,13 +61,13 @@ struct LogbookView: View {
 
                     filterRow
 
-                    if showsFood {
+                    ForEach(allDays, id: \.self) { day in
 
-                        ForEach(sortedDays, id: \.self) { day in
+                        dayLabelRow(for: day)
+
+                        if showsFood {
 
                             let dayEntries = groupedEntries[day] ?? []
-
-                            dayLabelRow(for: day)
 
                             ForEach(MealCategory.allCases, id: \.self) { meal in
 
@@ -73,7 +77,7 @@ struct LogbookView: View {
 
                                 if !mealEntries.isEmpty {
 
-                                    mealLabelRow(meal)
+                                    mealLabelRow(meal.rawValue)
 
                                     ForEach(mealEntries) { entry in
 
@@ -117,36 +121,42 @@ struct LogbookView: View {
 
                         }
 
-                    }
+                        if showsTraining {
 
-                    if showsTraining {
+                            let dayTrainings = (groupedTrainings[day] ?? []).sorted { $0.date > $1.date }
 
-                        trainingLabelRow
+                            if !dayTrainings.isEmpty {
 
-                        ForEach(sortedTrainings) { training in
+                                mealLabelRow("Training")
 
-                            VStack(alignment: .leading, spacing: 2) {
+                                ForEach(dayTrainings) { training in
 
-                                Text(training.type.rawValue)
-                                    .font(.headline)
-                                    .foregroundStyle(Color.wwDarkAccent)
+                                    VStack(alignment: .leading, spacing: 2) {
 
-                                Text("\(training.durationMinutes) min • RPE \(training.rpe) • \(training.estimatedCaloriesBurned.roundedInt) kcal")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.wwSecondaryText)
+                                        Text(training.type.rawValue)
+                                            .font(.headline)
+                                            .foregroundStyle(Color.wwDarkAccent)
+
+                                        Text("\(training.durationMinutes) min • RPE \(training.rpe) • \(training.estimatedCaloriesBurned.roundedInt) kcal")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.wwSecondaryText)
+
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .cardRow()
+
+                                }
+                                .onDelete { indexSet in
+
+                                    for index in indexSet {
+                                        modelContext.delete(dayTrainings[index])
+                                    }
+
+                                    try? modelContext.save()
+
+                                }
 
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .cardRow()
-
-                        }
-                        .onDelete { indexSet in
-
-                            for index in indexSet {
-                                modelContext.delete(sortedTrainings[index])
-                            }
-
-                            try? modelContext.save()
 
                         }
 
@@ -232,20 +242,11 @@ struct LogbookView: View {
 
     // MARK: - Label-rijen (bewust gewone rijen i.p.v. Section-headers, zodat de kleur altijd klopt)
 
-    private func mealLabelRow(_ meal: MealCategory) -> some View {
-        Text(meal.rawValue)
+    private func mealLabelRow(_ label: String) -> some View {
+        Text(label)
             .font(.caption.bold())
             .foregroundStyle(Color.wwTeal)
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 2, trailing: 16))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-    }
-
-    private var trainingLabelRow: some View {
-        Text("Training")
-            .font(.subheadline.bold())
-            .foregroundStyle(Color.wwDarkAccent)
-            .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 4, trailing: 16))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
     }

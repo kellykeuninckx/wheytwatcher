@@ -150,7 +150,7 @@ struct CopyMealsView: View {
         } else if Calendar.current.isDateInYesterday(selectedDate) {
             return "Gisteren"
         } else {
-            return selectedDate.formatted(.dateTime.weekday(.wide))
+            return selectedDate.formatted(Date.FormatStyle(locale: Locale(identifier: "nl_NL")).weekday(.wide))
         }
     }
 

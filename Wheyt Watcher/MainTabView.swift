@@ -3,38 +3,55 @@ import SwiftUI
 struct MainTabView: View {
     let profile: UserProfile
 
+    private enum Tab: Hashable {
+        case today, meals, favorites, logbook, progress
+    }
+
+    @State private var selectedTab: Tab = .today
+
+    private var currentTint: Color {
+        switch selectedTab {
+        case .today: return .wwTeal
+        case .meals: return .wwOrange
+        case .favorites: return .wwCoral
+        case .logbook: return .wwAqua
+        case .progress: return .wwBlue
+        }
+    }
+
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             TodayView(profile: profile)
                 .tabItem {
                     Label("Vandaag", systemImage: "house.fill")
                 }
-                .tint(Color.wwTeal)
+                .tag(Tab.today)
 
             MealsView()
                 .tabItem {
                     Label("Maaltijden", systemImage: "fork.knife")
                 }
-                .tint(Color.wwOrange)
+                .tag(Tab.meals)
 
             FavoritesView()
                 .tabItem {
                     Label("Favorieten", systemImage: "heart.fill")
                 }
-                .tint(Color.wwCoral)
+                .tag(Tab.favorites)
 
             LogbookView()
                 .tabItem {
                     Label("Logboek", systemImage: "list.bullet.clipboard")
                 }
-                .tint(Color.wwAqua)
+                .tag(Tab.logbook)
 
             ProgressViewScreen(profile: profile)
                 .tabItem {
                     Label("Progressie", systemImage: "chart.line.uptrend.xyaxis")
                 }
-                .tint(Color.wwBlue)
+                .tag(Tab.progress)
         }
+        .tint(currentTint)
     }
 }
 //

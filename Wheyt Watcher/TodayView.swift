@@ -895,7 +895,10 @@ struct TodayView: View {
                 .font(.footnote)
                 .foregroundStyle(Color.wwDarkAccent)
 
+            Spacer(minLength: 0)
+
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .wwCard()
 
     }

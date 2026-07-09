@@ -19,7 +19,9 @@ struct ProfileView: View {
     @AppStorage("wwWeighInWeekday") private var weighInWeekday = 2
 
     private var weekdayOptions: [(value: Int, name: String)] {
-        Calendar.current.weekdaySymbols.enumerated().map { index, name in
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "nl_NL")
+        return calendar.weekdaySymbols.enumerated().map { index, name in
             (value: index + 1, name: name.capitalized)
         }
     }
@@ -259,7 +261,7 @@ struct ProfileView: View {
                             .font(.subheadline.bold())
                             .foregroundStyle(Color.wwDarkAccent)
 
-                        Text("\(period.startDate.formatted(date: .abbreviated, time: .omitted)) – \(period.endDate.formatted(date: .abbreviated, time: .omitted))")
+                        Text("\(period.startDate.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: Locale(identifier: "nl_NL")))) – \(period.endDate.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: Locale(identifier: "nl_NL"))))")
                             .font(.caption)
                             .foregroundStyle(Color.wwSecondaryText)
 

@@ -136,6 +136,7 @@ struct LogbookView: View {
                                     .foregroundStyle(Color.wwSecondaryText)
 
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .cardRow()
 
                         }
@@ -273,7 +274,7 @@ struct LogbookView: View {
 
         return HStack(spacing: 6) {
 
-            Text(day.formatted(date: .abbreviated, time: .omitted))
+            Text(day.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: Locale(identifier: "nl_NL"))))
                 .font(.subheadline.bold())
                 .foregroundStyle(Color.wwDarkAccent)
 

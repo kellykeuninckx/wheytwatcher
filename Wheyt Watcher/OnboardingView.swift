@@ -36,7 +36,9 @@ struct OnboardingView: View {
     @AppStorage("wwReminderWeeklyWeighIn") private var reminderWeeklyWeighIn = true
 
     private var weekdayOptions: [(value: Int, name: String)] {
-        Calendar.current.weekdaySymbols.enumerated().map { index, name in
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "nl_NL")
+        return calendar.weekdaySymbols.enumerated().map { index, name in
             (value: index + 1, name: name.capitalized)
         }
     }

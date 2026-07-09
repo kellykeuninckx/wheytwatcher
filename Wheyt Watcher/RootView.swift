@@ -14,6 +14,7 @@ struct RootView: View {
             }
         }
         .preferredColorScheme(isDarkTheme ? .dark : .light)
+        .environment(\.locale, Locale(identifier: "nl_NL"))
     }
 }
 //

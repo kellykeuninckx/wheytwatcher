@@ -32,6 +32,8 @@ struct TodayView: View {
     @AppStorage("wwLastMissedDaysPromptDate") private var lastMissedDaysPromptDateString: String = ""
 
     @AppStorage("wwIsDarkTheme") private var isDarkTheme: Bool = true
+    @AppStorage("wwReminderEveningLog") private var reminderEveningLog = true
+    @AppStorage("wwReminderGoalEnding") private var reminderGoalEnding = true
 
 
     private var todaysFood: [FoodLogEntry] {
@@ -200,6 +202,7 @@ struct TodayView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .tint(Color.wwTeal)
             .sheet(isPresented: $showingAddFood) {
                 AddFoodView()
             }.sheet(isPresented: $showingCopyMeal) {
@@ -287,6 +290,10 @@ struct TodayView: View {
                 if !showingGoalPeriodEndedSheet && !showingAdaptiveCheckInSheet {
                     checkMissedDaysPrompt()
                 }
+                refreshReminders()
+            }
+            .onChange(of: todaysFood.count) {
+                refreshReminders()
             }
             .onChange(of: todaysTrainingCalories) {
                 if isToday {
@@ -392,6 +399,23 @@ struct TodayView: View {
 
         missedDaysRange = missingDays.sorted()
         showingMissedDaysPrompt = true
+    }
+
+    // MARK: - Reminders
+
+    private func refreshReminders() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let hasLoggedToday = foodEntries.contains { Calendar.current.isDate($0.date, inSameDayAs: today) }
+
+        ReminderManager.refreshEveningLogReminder(
+            enabled: reminderEveningLog,
+            hasLoggedToday: hasLoggedToday
+        )
+
+        ReminderManager.setGoalEndingReminderEnabled(
+            reminderGoalEnding,
+            period: profile.activeGoalPeriod
+        )
     }
 
     // MARK: - Doel-voortgang (read-only, wisselen doe je via Profiel)
@@ -892,6 +916,18 @@ struct TodayView: View {
             return "figure.walk"
         case .boxing:
             return "figure.boxing"
+        case .swimming:
+            return "figure.pool.swim"
+        case .crossfit:
+            return "figure.cross.training"
+        case .cycling:
+            return "figure.outdoor.cycle"
+        case .yoga:
+            return "figure.yoga"
+        case .racketSports:
+            return "figure.tennis"
+        case .rowing:
+            return "figure.rower"
         case .other:
             return "figure.mixed.cardio"
         }

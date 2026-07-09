@@ -38,17 +38,16 @@ struct MealsView: View {
                                     HStack {
                                         
                                         Image(systemName: "fork.knife.circle.fill")
-                                                .font(.title2)
                                                 .foregroundStyle(Color.wwOrange)
 
-                                        VStack(alignment: .leading, spacing: 3) {
+                                        VStack(alignment: .leading, spacing: 2) {
 
                                             Text(meal.name)
                                                 .font(.headline)
                                                 .foregroundStyle(Color.wwDarkAccent)
 
                                             Text("\(meal.items.count) ingrediënten • \(Int(meal.items.reduce(0) { $0 + $1.calories })) kcal")
-                                                .font(.subheadline)
+                                                .font(.caption)
                                                 .foregroundStyle(Color.wwSecondaryText)
 
                                         }
@@ -69,7 +68,6 @@ struct MealsView: View {
                             }
 
                         }
-                        .padding()
                     
 
                     }

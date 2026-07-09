@@ -93,6 +93,12 @@ enum TrainingType: String, Codable, CaseIterable, Identifiable {
     case running = "Hardlopen"
     case walking = "Wandelen"
     case boxing = "Boksen"
+    case swimming = "Zwemmen"
+    case crossfit = "CrossFit"
+    case cycling = "Fietsen"
+    case yoga = "Yoga / Pilates"
+    case racketSports = "Tennis / Padel"
+    case rowing = "Roeien"
     case other = "Overig"
 
     var id: String { rawValue }
@@ -113,6 +119,18 @@ enum TrainingType: String, Codable, CaseIterable, Identifiable {
             return 2.5...4.0
         case .boxing:
             return 6.0...10.0
+        case .swimming:
+            return 6.0...10.0
+        case .crossfit:
+            return 7.0...12.0
+        case .cycling:
+            return 4.0...10.0
+        case .yoga:
+            return 2.5...4.0
+        case .racketSports:
+            return 5.0...8.0
+        case .rowing:
+            return 5.0...9.0
         case .other:
             return 3.0...8.0
         }

@@ -157,7 +157,7 @@ struct LogbookView: View {
 
             }
             .navigationTitle("Logboek")
-            .tint(Color.wwTeal)
+            .tint(Color.wwAqua)
             .safeAreaInset(edge: .bottom) {
 
                 if isSelecting && !selectedEntries.isEmpty {
@@ -310,7 +310,7 @@ struct LogbookView: View {
                 }
 
             } label: {
-                Image(systemName: "ellipsis.circle")
+                Image(systemName: "bed.double.fill")
                     .foregroundStyle(Color.wwSecondaryText)
             }
 

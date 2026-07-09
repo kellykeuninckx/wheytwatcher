@@ -30,7 +30,11 @@ struct OnboardingView: View {
 
         NavigationStack {
 
-            Form {
+            ZStack {
+
+                DumbbellPatternBackground()
+
+                Form {
 
                 Section("Jij") {
 
@@ -38,12 +42,14 @@ struct OnboardingView: View {
                         "Naam",
                         text: $name
                     )
+                    .foregroundStyle(Color.wwDarkAccent)
 
                     Stepper(
                         "Leeftijd: \(age)",
                         value: $age,
                         in: 12...90
                     )
+                    .foregroundStyle(Color.wwDarkAccent)
 
                     Picker(
                         "Geslacht",
@@ -62,6 +68,7 @@ struct OnboardingView: View {
                     HStack {
 
                         Text("Lengte")
+                            .foregroundStyle(Color.wwDarkAccent)
 
                         Spacer()
 
@@ -72,14 +79,17 @@ struct OnboardingView: View {
                         )
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
+                        .foregroundStyle(Color.wwDarkAccent)
 
                         Text("cm")
+                            .foregroundStyle(Color.wwSecondaryText)
 
                     }
 
                     HStack {
 
                         Text("Gewicht")
+                            .foregroundStyle(Color.wwDarkAccent)
 
                         Spacer()
 
@@ -90,8 +100,10 @@ struct OnboardingView: View {
                         )
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
+                        .foregroundStyle(Color.wwDarkAccent)
 
                         Text("kg")
+                            .foregroundStyle(Color.wwSecondaryText)
 
                     }
 
@@ -100,8 +112,10 @@ struct OnboardingView: View {
                         text: $bodyFatText
                     )
                     .keyboardType(.decimalPad)
+                    .foregroundStyle(Color.wwDarkAccent)
 
                 }
+                .listRowBackground(Color.wwCardBackground)
 
                 Section("Doel") {
 
@@ -152,12 +166,13 @@ struct OnboardingView: View {
                         value: $durationWeeks,
                         in: 2...52
                     )
+                    .foregroundStyle(Color.wwDarkAccent)
 
                     HStack(spacing: 6) {
 
                         Text("Advies: \(GoalDurationAdvisor.recommendedWeeks(for: goalMode, pace: goalPace)) weken")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.wwSecondaryText)
 
                         Spacer()
 
@@ -167,6 +182,7 @@ struct OnboardingView: View {
                             Image(systemName: "info.circle")
                         }
                         .buttonStyle(.plain)
+                        .foregroundStyle(Color.wwTeal)
 
                     }
                     .popover(isPresented: $showingDurationInfo) {
@@ -179,6 +195,7 @@ struct OnboardingView: View {
                     }
 
                 }
+                .listRowBackground(Color.wwCardBackground)
 
                 Section {
 
@@ -199,10 +216,23 @@ struct OnboardingView: View {
                             )
                             .isEmpty
                     )
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.wwTeal)
+
+                } footer: {
+
+                    Text("Tip: Ziek, op vakantie of toe aan een rustdag? Dat kun je instellen via je Profiel of op je Vandaag scherm. Zo tellen deze dagen niet mee als 'gemist'. Handig!")
+                        .font(.caption2)
+                        .foregroundStyle(Color.wwSecondaryText)
 
                 }
+                .listRowBackground(Color.wwCardBackground)
+
+                }
+                .scrollContentBackground(.hidden)
 
             }
+            .tint(Color.wwTeal)
             .navigationTitle("Profiel")
             .navigationBarTitleDisplayMode(.inline)
             .onChange(of: goalMode) {

@@ -63,6 +63,7 @@ struct FavoritesView: View {
                                                 .foregroundStyle(Color.wwSecondaryText)
                                             
                                         }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                         .wwCard()
                                         
                                     }

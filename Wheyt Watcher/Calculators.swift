@@ -158,7 +158,8 @@ enum AdaptiveCheckInEvaluator {
         period: GoalPeriod,
         foodEntries: [FoodLogEntry],
         weightLogs: [WeightLog],
-        trainings: [TrainingSession]
+        trainings: [TrainingSession],
+        dayStatuses: [DayStatus] = []
     ) -> AdaptiveCheckInResult {
 
         let calendar = Calendar.current
@@ -169,7 +170,16 @@ enum AdaptiveCheckInEvaluator {
                 .filter { $0.date >= windowStart }
                 .map { calendar.startOfDay(for: $0.date) }
         ).count
-        let loggingRate = Double(loggedDays) / 14.0
+
+        let markedDays = Set(
+            dayStatuses
+                .filter { $0.date >= windowStart }
+                .map { calendar.startOfDay(for: $0.date) }
+        ).count
+
+        // Gemarkeerde dagen (ziek/vakantie/rustdag) tellen niet mee als "moeten loggen".
+        let trackableDays = max(14 - markedDays, 1)
+        let loggingRate = Double(loggedDays) / Double(trackableDays)
 
         let recentWeights = weightLogs.filter { $0.date >= windowStart }
         let trainingCount = trainings.filter { $0.date >= windowStart }.count

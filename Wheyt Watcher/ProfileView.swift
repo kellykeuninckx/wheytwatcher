@@ -6,8 +6,11 @@ struct ProfileView: View {
     let profile: UserProfile
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
 
     @State private var showingEditGoal = false
+    @State private var showingDeleteConfirmation = false
+    @State private var showingAddRestDay = false
 
     var body: some View {
 
@@ -29,6 +32,10 @@ struct ProfileView: View {
                             historyCard
                         }
 
+                        restDaySection
+
+                        deleteDataSection
+
                     }
                     .padding(.vertical, 8)
 
@@ -38,6 +45,17 @@ struct ProfileView: View {
             .navigationTitle("Profiel")
             .sheet(isPresented: $showingEditGoal) {
                 EditGoalSheet(profile: profile)
+            }
+            .sheet(isPresented: $showingAddRestDay) {
+                AddRestDaySheet()
+            }
+            .alert("Gegevens verwijderen", isPresented: $showingDeleteConfirmation) {
+                Button("Nee", role: .cancel) {}
+                Button("Ja, verwijder", role: .destructive) {
+                    deleteProfileData()
+                }
+            } message: {
+                Text("Deze actie kan niet ongedaan worden. Weet je zeker dat je wil doorgaan?")
             }
 
         }
@@ -252,6 +270,56 @@ struct ProfileView: View {
         .wwCard()
     }
 
+    // MARK: - Rustdag toevoegen
+
+    private var restDaySection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+
+            Button {
+                showingAddRestDay = true
+            } label: {
+                Label("Rustdag toevoegen", systemImage: "bed.double.fill")
+                    .font(.subheadline.bold())
+            }
+            .tint(Color.wwTeal)
+
+            Text("Ben je ziek, met vakantie of toe aan een rustdag? Vink deze optie dan aan.")
+                .font(.caption2)
+                .foregroundStyle(Color.wwTertiaryText)
+
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .wwCard()
+    }
+
+    // MARK: - Gegevens verwijderen
+
+    private var deleteDataSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+
+            Button(role: .destructive) {
+                showingDeleteConfirmation = true
+            } label: {
+                Label("Gegevens verwijderen", systemImage: "trash")
+                    .font(.subheadline.bold())
+            }
+            .tint(Color.wwCoral)
+
+            Text("Verwijdert je profiel en doelgeschiedenis en start de onboarding opnieuw. Geen zorgen: je logboek, gewicht, favorieten, trainingen en opgeslagen maaltijden blijven bewaard.")
+                .font(.caption2)
+                .foregroundStyle(Color.wwTertiaryText)
+
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .wwCard()
+    }
+
+    private func deleteProfileData() {
+        modelContext.delete(profile)
+        try? modelContext.save()
+        dismiss()
+    }
+
 }
 
 // MARK: - Doel wijzigen
@@ -387,3 +455,116 @@ struct EditGoalSheet: View {
 //
 //  Created by Kelly Keuninckx on 07/07/2026.
 //
+
+// MARK: - Rustdag/ziek/vakantie toevoegen
+
+struct AddRestDaySheet: View {
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+
+    @Query private var existingDayStatuses: [DayStatus]
+
+    @State private var type: DayStatusType = .restDay
+    @State private var startDate: Date = Date()
+    @State private var useEndDate = false
+    @State private var endDate: Date = Date()
+
+    var body: some View {
+
+        NavigationStack {
+
+            ZStack {
+
+                DumbbellPatternBackground()
+
+                Form {
+
+                    Section("Type") {
+                        Picker("Type", selection: $type) {
+                            ForEach(DayStatusType.allCases) { option in
+                                Label(option.rawValue, systemImage: option.icon).tag(option)
+                            }
+                        }
+                    }
+                    .listRowBackground(Color.wwCardBackground)
+
+                    Section("Periode") {
+
+                        DatePicker("Vanaf", selection: $startDate, displayedComponents: .date)
+                            .foregroundStyle(Color.wwDarkAccent)
+
+                        Toggle("Tot een einddatum", isOn: $useEndDate.animation())
+                            .tint(Color.wwTeal)
+                            .foregroundStyle(Color.wwDarkAccent)
+
+                        if useEndDate {
+                            DatePicker(
+                                "Tot en met",
+                                selection: $endDate,
+                                in: startDate...,
+                                displayedComponents: .date
+                            )
+                            .foregroundStyle(Color.wwDarkAccent)
+                        }
+
+                    }
+                    .listRowBackground(Color.wwCardBackground)
+
+                    Section {
+                        Text("Handig voor vakantie, waar je de einddatum vaak al weet. Bij ziekte kun je 'm gewoon later nog verlengen via het Logboek.")
+                            .font(.caption)
+                            .foregroundStyle(Color.wwSecondaryText)
+                    }
+                    .listRowBackground(Color.wwCardBackground)
+
+                }
+                .scrollContentBackground(.hidden)
+
+            }
+            .tint(Color.wwTeal)
+            .navigationTitle("Rustdag toevoegen")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annuleer") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Bewaar") {
+                        save()
+                    }
+                }
+            }
+
+        }
+
+    }
+
+    private func save() {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: startDate)
+        let end = useEndDate ? calendar.startOfDay(for: endDate) : start
+
+        var day = start
+        while day <= end {
+
+            if let existing = existingDayStatuses.first(where: { calendar.isDate($0.date, inSameDayAs: day) }) {
+                modelContext.delete(existing)
+            }
+
+            let status = DayStatus(date: day, type: type)
+            modelContext.insert(status)
+
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+            day = nextDay
+
+        }
+
+        try? modelContext.save()
+        dismiss()
+    }
+
+}

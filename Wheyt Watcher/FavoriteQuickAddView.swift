@@ -20,37 +20,56 @@ struct FavoriteQuickAddView: View {
 
         NavigationStack {
 
-            Form {
+            ZStack {
 
-                Section("Product") {
+                DumbbellPatternBackground()
 
-                    Text(favorite.name)
+                Form {
 
-                }
+                    Section("Product") {
 
-                Section("Hoeveelheid") {
+                        Text(favorite.name)
+                            .foregroundStyle(Color.wwDarkAccent)
 
-                    TextField("Gram", value: $grams, format: .number)
-                        .keyboardType(.decimalPad)
+                    }
+                    .listRowBackground(Color.wwCardBackground)
 
-                }
+                    Section("Hoeveelheid") {
 
-                Section("Maaltijd") {
+                        HStack {
+                            TextField("Gram", value: $grams, format: .number)
+                                .keyboardType(.decimalPad)
+                                .foregroundStyle(Color.wwDarkAccent)
 
-                    Picker("Maaltijd", selection: $meal) {
-
-                        ForEach(MealCategory.allCases, id: \.self) { meal in
-
-                            Text(meal.rawValue)
-                                .tag(meal)
-
+                            Text("g")
+                                .foregroundStyle(Color.wwSecondaryText)
                         }
 
                     }
+                    .listRowBackground(Color.wwCardBackground)
+
+                    Section("Maaltijd") {
+
+                        Picker("Maaltijd", selection: $meal) {
+
+                            ForEach(MealCategory.allCases, id: \.self) { meal in
+
+                                Text(meal.rawValue)
+                                    .tag(meal)
+
+                            }
+
+                        }
+                        .tint(Color.wwDarkAccent)
+
+                    }
+                    .listRowBackground(Color.wwCardBackground)
 
                 }
+                .scrollContentBackground(.hidden)
 
             }
+            .tint(Color.wwCoral)
             .navigationTitle("Toevoegen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -94,4 +113,3 @@ struct FavoriteQuickAddView: View {
 //
 //  Created by Kelly Keuninckx on 06/07/2026.
 //
-

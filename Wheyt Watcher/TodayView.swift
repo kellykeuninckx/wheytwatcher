@@ -9,6 +9,7 @@ struct TodayView: View {
     @Query private var trainings: [TrainingSession]
     @Query private var snapshots: [DailyTargetSnapshot]
     @Query private var weightLogs: [WeightLog]
+    @Query private var dayStatuses: [DayStatus]
 
     @State private var showingAddFood = false
     @State private var showingAddTraining = false
@@ -24,6 +25,10 @@ struct TodayView: View {
     @State private var showingGoalPeriodEndedSheet = false
     @State private var showingAdaptiveCheckInSheet = false
     @State private var adaptiveCheckInResult: AdaptiveCheckInResult?
+    @State private var showingMissedDaysPrompt = false
+    @State private var missedDaysRange: [Date] = []
+    @State private var showingAddRestDay = false
+    @AppStorage("wwLastMissedDaysPromptDate") private var lastMissedDaysPromptDateString: String = ""
 
     @AppStorage("wwIsDarkTheme") private var isDarkTheme: Bool = true
 
@@ -209,7 +214,7 @@ struct TodayView: View {
             }
 
             .sheet(isPresented: $showingBarcodeScanner) {
-                Text("BarcodeScannerView")
+                BarcodeScannerView()
             }
             .sheet(isPresented: $showingLogbook) {
                 LogbookView()
@@ -246,6 +251,27 @@ struct TodayView: View {
                     )
                 }
             }
+            .sheet(isPresented: $showingMissedDaysPrompt) {
+                MissedDaysPromptSheet(
+                    days: missedDaysRange,
+                    onSelect: { type in
+                        for day in missedDaysRange {
+                            let status = DayStatus(date: day, type: type)
+                            modelContext.insert(status)
+                        }
+                        try? modelContext.save()
+                        recordMissedDaysPromptShownToday()
+                        showingMissedDaysPrompt = false
+                    },
+                    onDismiss: {
+                        recordMissedDaysPromptShownToday()
+                        showingMissedDaysPrompt = false
+                    }
+                )
+            }
+            .sheet(isPresented: $showingAddRestDay) {
+                AddRestDaySheet()
+            }
             .onAppear {
                 if isToday {
                     ensureTodaySnapshotExists()
@@ -253,6 +279,9 @@ struct TodayView: View {
                 checkGoalPeriodEnded()
                 if !showingGoalPeriodEndedSheet {
                     checkAdaptiveCheckIn()
+                }
+                if !showingGoalPeriodEndedSheet && !showingAdaptiveCheckInSheet {
+                    checkMissedDaysPrompt()
                 }
             }
             .onChange(of: todaysTrainingCalories) {
@@ -306,9 +335,59 @@ struct TodayView: View {
             period: period,
             foodEntries: foodEntries,
             weightLogs: weightLogs,
-            trainings: trainings
+            trainings: trainings,
+            dayStatuses: dayStatuses
         )
         showingAdaptiveCheckInSheet = true
+    }
+
+    // MARK: - Gemiste dagen (reactieve check)
+
+    private var missedDaysDayFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }
+
+    private func alreadyPromptedForMissedDaysToday() -> Bool {
+        guard !lastMissedDaysPromptDateString.isEmpty else { return false }
+        return lastMissedDaysPromptDateString == missedDaysDayFormatter.string(from: Date())
+    }
+
+    private func recordMissedDaysPromptShownToday() {
+        lastMissedDaysPromptDateString = missedDaysDayFormatter.string(from: Date())
+    }
+
+    /// Kijkt of er, vlak vóór vandaag, een aaneengesloten reeks dagen is zonder voedingslog én
+    /// zonder handmatige dagstatus. Zo ja: vraagt de gebruiker of dat ziek/vakantie/rustdag was.
+    /// Vraagt maximaal 1x per dag (anders zou dit elke keer dat de app opent terugkomen).
+    private func checkMissedDaysPrompt() {
+        guard !alreadyPromptedForMissedDaysToday() else { return }
+
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        var missingDays: [Date] = []
+        var offset = 1
+
+        while missingDays.count < 14 {
+            guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { break }
+
+            let hasFoodEntry = foodEntries.contains { calendar.isDate($0.date, inSameDayAs: day) }
+            let isMarked = dayStatuses.contains { calendar.isDate($0.date, inSameDayAs: day) }
+
+            if hasFoodEntry || isMarked {
+                break
+            }
+
+            missingDays.append(day)
+            offset += 1
+        }
+
+        guard missingDays.count >= 3 else { return }
+
+        missedDaysRange = missingDays.sorted()
+        showingMissedDaysPrompt = true
     }
 
     // MARK: - Doel-voortgang (read-only, wisselen doe je via Profiel)
@@ -322,7 +401,7 @@ struct TodayView: View {
             }
         }
         .font(.caption.bold())
-        .foregroundStyle(Color.wwTeal)
+        .foregroundStyle(Color.wwOrange)
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -330,8 +409,9 @@ struct TodayView: View {
     // MARK: - Header
     
     private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
+
+            HStack {
                 Button {
 
                     showingProfile = true
@@ -352,34 +432,36 @@ struct TodayView: View {
 
                 }
                 .buttonStyle(.plain)
-                
-                Text("Track your macros. Guard your gains.")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
-                
-                goalProgressLabel
-            }
-            
-            Spacer()
-            
-            HStack(spacing: 10) {
-                themeToggleButton
 
-                Button {
-                    withAnimation(.easeInOut(duration: 0.15)) {
-                        showingQuickAddMenu.toggle()
+                Spacer()
+
+                HStack(spacing: 10) {
+                    themeToggleButton
+
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            showingQuickAddMenu.toggle()
+                        }
+                    } label: {
+                        Image(systemName: "fork.knife.circle.fill")
+                            .font(.title2)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(Color.wwTeal)
+                            .padding(10)
+                            .background(Color.wwCardBackground)
+                            .clipShape(Circle())
+                            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                     }
-                } label: {
-                    Image(systemName: "fork.knife.circle.fill")
-                        .font(.title2)
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(Color.wwTeal)
-                        .padding(10)
-                        .background(Color.wwCardBackground)
-                        .clipShape(Circle())
-                        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                 }
             }
+
+            Text("TRACK YOUR MACROS · GUARD YOUR GAINS")
+                .font(.caption2.weight(.medium))
+                .kerning(1.5)
+                .foregroundStyle(Color.wwTeal)
+
+            goalProgressLabel
+
         }
     }
 
@@ -532,10 +614,22 @@ struct TodayView: View {
     // MARK: - Calories Card
     
     private var caloriesCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Calorieën")
-                .font(.headline)
-                .foregroundStyle(Color.wwDarkAccent)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Calorieën")
+                    .font(.headline)
+                    .foregroundStyle(Color.wwDarkAccent)
+
+                Spacer()
+
+                Button {
+                    showingAddRestDay = true
+                } label: {
+                    Image(systemName: "bed.double.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.wwSecondaryText)
+                }
+            }
             
             HStack(spacing: 14) {
                 RingProgressView(
@@ -1001,6 +1095,66 @@ enum NutritionTips {
         let hour = Calendar.current.component(.hour, from: date)
         let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: date) ?? 0
         return all[(dayOfYear * 24 + hour) % all.count]
+    }
+
+}
+
+// MARK: - Gemiste-dagen check-in
+
+struct MissedDaysPromptSheet: View {
+
+    let days: [Date]
+    let onSelect: (DayStatusType) -> Void
+    let onDismiss: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 20) {
+
+            Spacer()
+
+            Text("🕊️")
+                .font(.system(size: 44))
+
+            Text("We zien dat je \(days.count) dagen niet hebt gelogd")
+                .font(.title3.bold())
+                .foregroundStyle(Color.wwDarkAccent)
+                .multilineTextAlignment(.center)
+
+            Text("Was je ziek, met vakantie, of gewoon druk? Dan tellen die dagen niet mee als gemist.")
+                .font(.subheadline)
+                .foregroundStyle(Color.wwSecondaryText)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+
+            Spacer()
+
+            VStack(spacing: 10) {
+
+                ForEach(DayStatusType.allCases) { type in
+                    Button {
+                        onSelect(type)
+                        dismiss()
+                    } label: {
+                        Label(type.rawValue, systemImage: type.icon)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Color.wwTeal)
+                }
+
+                Button("Nee, gewoon niet gelogd") {
+                    onDismiss()
+                    dismiss()
+                }
+                .foregroundStyle(Color.wwSecondaryText)
+
+            }
+
+        }
+        .padding(30)
+        .presentationDetents([.medium])
     }
 
 }

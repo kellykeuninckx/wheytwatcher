@@ -10,8 +10,12 @@ struct ProgressViewScreen: View {
     @Query(sort: \FoodLogEntry.date) private var foodEntries: [FoodLogEntry]
     @Query(sort: \TrainingSession.date) private var trainings: [TrainingSession]
     @Query(sort: \DailyTargetSnapshot.date) private var snapshots: [DailyTargetSnapshot]
+    @Query private var dayStatuses: [DayStatus]
 
     @State private var selectedRange: ChartRange = .twoWeeks
+    @State private var showingEnlargedWeight = false
+    @State private var showingEnlargedCalories = false
+    @State private var showingEnlargedProtein = false
 
     enum ChartRange: String, CaseIterable, Identifiable {
         case twoWeeks = "14 dagen"
@@ -141,11 +145,80 @@ struct ProgressViewScreen: View {
 
                         caloriesCard
                     }
-                    .padding(.horizontal, 18)
+                    .padding(.horizontal, 12)
                     .padding(.bottom, 24)
                 }
             }
             .navigationTitle("Progressie")
+            .sheet(isPresented: $showingEnlargedWeight) {
+                EnlargedChartSheet(title: "Gewicht") {
+                    Chart {
+                        weightChartMarks
+                    }
+                    .chartXAxis {
+                        AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
+                            AxisGridLine()
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.15))
+                            AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.7))
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks { _ in
+                            AxisGridLine()
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.1))
+                            AxisValueLabel()
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.7))
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showingEnlargedCalories) {
+                EnlargedChartSheet(title: "Calorieën") {
+                    Chart {
+                        caloriesChartMarks
+                    }
+                    .chartXAxis {
+                        AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
+                            AxisGridLine()
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.15))
+                            AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.7))
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks { _ in
+                            AxisGridLine()
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.1))
+                            AxisValueLabel()
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.7))
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showingEnlargedProtein) {
+                EnlargedChartSheet(title: "Eiwit-trend") {
+                    Chart {
+                        proteinChartMarks
+                    }
+                    .chartXAxis {
+                        AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
+                            AxisGridLine()
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.15))
+                            AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.7))
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks { _ in
+                            AxisGridLine()
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.1))
+                            AxisValueLabel()
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.7))
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -229,13 +302,23 @@ struct ProgressViewScreen: View {
         ) ?? Calendar.current.startOfDay(for: Date())
     }
 
+    private var markedDaysSet: Set<Date> {
+        Set(dayStatuses.map { Calendar.current.startOfDay(for: $0.date) })
+    }
+
     private var loggingStreak: Int {
         let loggedDaysSet = Set(foodEntries.map { Calendar.current.startOfDay(for: $0.date) })
+        let marked = markedDaysSet
         var streak = 0
         var day = Calendar.current.startOfDay(for: Date())
 
-        while loggedDaysSet.contains(day) {
-            streak += 1
+        while true {
+            if loggedDaysSet.contains(day) {
+                streak += 1
+            } else if !marked.contains(day) {
+                break
+            }
+            // gemarkeerde dag (ziek/vakantie/rustdag): telt niet mee, maar breekt de streak ook niet
             guard let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: day) else { break }
             day = previousDay
         }
@@ -246,12 +329,20 @@ struct ProgressViewScreen: View {
     private var proteinAdherenceThisWeek: (met: Int, total: Int)? {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
+        let marked = markedDaysSet
 
         var met = 0
         var total = 0
         var day = currentWeekStart
 
         while day <= today {
+
+            if marked.contains(day) {
+                guard let nextDay = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+                day = nextDay
+                continue
+            }
+
             let dayProtein = foodEntries
                 .filter { calendar.isDate($0.date, inSameDayAs: day) }
                 .reduce(0) { $0 + $1.proteinGrams }
@@ -344,6 +435,27 @@ struct ProgressViewScreen: View {
 
     // MARK: - Gewicht
 
+    @ChartContentBuilder
+    private var weightChartMarks: some ChartContent {
+        ForEach(filteredWeights) { log in
+            PointMark(
+                x: .value("Datum", log.date, unit: .day),
+                y: .value("Gewicht", log.weightKg)
+            )
+            .foregroundStyle(Color.wwBlue.opacity(0.6))
+            .symbolSize(20)
+        }
+
+        ForEach(weightTrendPoints, id: \.date) { point in
+            LineMark(
+                x: .value("Datum", point.date, unit: .day),
+                y: .value("Trend", point.value)
+            )
+            .foregroundStyle(Color.wwTeal)
+            .lineStyle(StrokeStyle(lineWidth: 2.5))
+        }
+    }
+
     private var weightCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -356,7 +468,7 @@ struct ProgressViewScreen: View {
                 if let latest = filteredWeights.last?.weightKg {
                     Text("\(latest.roundedInt) kg")
                         .font(.caption.bold())
-                        .foregroundStyle(Color.wwBlue)
+                        .foregroundStyle(Color.wwTeal)
                 }
             }
 
@@ -369,23 +481,7 @@ struct ProgressViewScreen: View {
                 )
             } else {
                 Chart {
-                    ForEach(filteredWeights) { log in
-                        PointMark(
-                            x: .value("Datum", log.date, unit: .day),
-                            y: .value("Gewicht", log.weightKg)
-                        )
-                        .foregroundStyle(Color.wwBlue.opacity(0.6))
-                        .symbolSize(20)
-                    }
-
-                    ForEach(weightTrendPoints, id: \.date) { point in
-                        LineMark(
-                            x: .value("Datum", point.date, unit: .day),
-                            y: .value("Trend", point.value)
-                        )
-                        .foregroundStyle(Color.wwTeal)
-                        .lineStyle(StrokeStyle(lineWidth: 2.5))
-                    }
+                    weightChartMarks
                 }
                 .frame(height: 130)
                 .chartXAxis {
@@ -410,9 +506,26 @@ struct ProgressViewScreen: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .wwCard()
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard !filteredWeights.isEmpty else { return }
+            showingEnlargedWeight = true
+        }
     }
 
     // MARK: - Calorieën vs. doel
+
+    @ChartContentBuilder
+    private var caloriesChartMarks: some ChartContent {
+        ForEach(dailyCalories.sorted(by: { $0.key < $1.key }), id: \.key) { day, calories in
+            BarMark(
+                x: .value("Datum", day, unit: .day),
+                y: .value("Calorieën", calories)
+            )
+            .foregroundStyle(Color.wwOrange.opacity(0.7))
+            .cornerRadius(3)
+        }
+    }
 
     private var caloriesCard: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -429,14 +542,7 @@ struct ProgressViewScreen: View {
                 )
             } else {
                 Chart {
-                    ForEach(dailyCalories.sorted(by: { $0.key < $1.key }), id: \.key) { day, calories in
-                        BarMark(
-                            x: .value("Datum", day, unit: .day),
-                            y: .value("Calorieën", calories)
-                        )
-                        .foregroundStyle(Color.wwOrange.opacity(0.7))
-                        .cornerRadius(3)
-                    }
+                    caloriesChartMarks
                 }
                 .frame(height: 180)
                 .chartXAxis {
@@ -458,9 +564,35 @@ struct ProgressViewScreen: View {
             }
         }
         .wwCard()
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard !dailyCalories.isEmpty else { return }
+            showingEnlargedCalories = true
+        }
     }
 
     // MARK: - Eiwit-trend
+
+    @ChartContentBuilder
+    private var proteinChartMarks: some ChartContent {
+        ForEach(dailyProtein.sorted(by: { $0.key < $1.key }), id: \.key) { day, protein in
+            LineMark(
+                x: .value("Datum", day, unit: .day),
+                y: .value("Eiwit", protein)
+            )
+            .foregroundStyle(Color.wwTeal)
+            .symbol(.circle)
+        }
+
+        ForEach(dailyTargetProtein.sorted(by: { $0.key < $1.key }), id: \.key) { day, target in
+            LineMark(
+                x: .value("Datum", day, unit: .day),
+                y: .value("Doel", target)
+            )
+            .foregroundStyle(Color.wwPurple.opacity(0.6))
+            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+        }
+    }
 
     private var proteinCard: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -477,23 +609,7 @@ struct ProgressViewScreen: View {
                 )
             } else {
                 Chart {
-                    ForEach(dailyProtein.sorted(by: { $0.key < $1.key }), id: \.key) { day, protein in
-                        LineMark(
-                            x: .value("Datum", day, unit: .day),
-                            y: .value("Eiwit", protein)
-                        )
-                        .foregroundStyle(Color.wwTeal)
-                        .symbol(.circle)
-                    }
-
-                    ForEach(dailyTargetProtein.sorted(by: { $0.key < $1.key }), id: \.key) { day, target in
-                        LineMark(
-                            x: .value("Datum", day, unit: .day),
-                            y: .value("Doel", target)
-                        )
-                        .foregroundStyle(Color.wwPurple.opacity(0.6))
-                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-                    }
+                    proteinChartMarks
                 }
                 .frame(height: 130)
                 .chartXAxis {
@@ -518,6 +634,11 @@ struct ProgressViewScreen: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .wwCard()
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard !dailyProtein.isEmpty else { return }
+            showingEnlargedProtein = true
+        }
     }
 
 }
@@ -527,3 +648,44 @@ struct ProgressViewScreen: View {
 //
 //  Created by Kelly Keuninckx on 06/07/2026.
 //
+
+// MARK: - Uitvergrote grafiek (bij tikken op een kaart)
+
+struct EnlargedChartSheet<Content: View>: View {
+
+    let title: String
+    @ViewBuilder let content: Content
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+
+                DumbbellPatternBackground()
+
+                VStack {
+                    content
+                        .frame(maxHeight: .infinity)
+                        .padding()
+                        .wwCard()
+
+                    Spacer()
+                }
+                .padding()
+
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Sluiten") {
+                        dismiss()
+                    }
+                }
+            }
+
+        }
+    }
+
+}

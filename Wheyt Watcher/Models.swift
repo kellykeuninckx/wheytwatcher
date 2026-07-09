@@ -463,6 +463,35 @@ final class WeightLog {
     }
 }
 
+enum DayStatusType: String, Codable, CaseIterable, Identifiable {
+    case sick = "Ziek"
+    case vacation = "Vakantie"
+    case restDay = "Rustdag"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .sick: return "cross.case.fill"
+        case .vacation: return "airplane"
+        case .restDay: return "moon.zzz.fill"
+        }
+    }
+}
+
+/// Markeert een dag als "niet normaal" (ziek/vakantie/rustdag), zodat streaks, compliance en
+/// het 2-wekelijkse advies deze dag niet als "gemist" meetellen. Geen entry = gewone dag.
+@Model
+final class DayStatus {
+    var date: Date
+    var type: DayStatusType
+
+    init(date: Date, type: DayStatusType) {
+        self.date = Calendar.current.startOfDay(for: date)
+        self.type = type
+    }
+}
+
 @Model
 final class DailyTargetSnapshot {
     var date: Date

@@ -6,12 +6,30 @@ struct LogbookView: View {
     @Query private var foodEntries: [FoodLogEntry]
     @Query private var trainings: [TrainingSession]
     @Query private var favorites: [FavoriteFood]
+    @Query private var dayStatuses: [DayStatus]
 
     @Environment(\.modelContext) private var modelContext
 
     @State private var isSelecting = false
     @State private var showingSaveMeal = false
     @State private var selectedEntries: Set<FoodLogEntry> = []
+
+    private enum LogFilter: String, CaseIterable, Identifiable {
+        case all = "Alles"
+        case food = "Voeding"
+        case training = "Training"
+        var id: String { rawValue }
+    }
+
+    @State private var selectedFilter: LogFilter = .all
+
+    private var showsFood: Bool {
+        selectedFilter != .training
+    }
+
+    private var showsTraining: Bool {
+        selectedFilter != .food
+    }
 
     private var groupedEntries: [Date: [FoodLogEntry]] {
         Dictionary(grouping: foodEntries) {
@@ -37,11 +55,15 @@ struct LogbookView: View {
 
                 List {
 
-                    ForEach(sortedDays, id: \.self) { day in
+                    filterRow
 
-                        Section {
+                    if showsFood {
+
+                        ForEach(sortedDays, id: \.self) { day in
 
                             let dayEntries = groupedEntries[day] ?? []
+
+                            dayLabelRow(for: day)
 
                             ForEach(MealCategory.allCases, id: \.self) { meal in
 
@@ -51,63 +73,55 @@ struct LogbookView: View {
 
                                 if !mealEntries.isEmpty {
 
-                                    Section {
+                                    mealLabelRow(meal)
 
-                                        ForEach(mealEntries) { entry in
+                                    ForEach(mealEntries) { entry in
 
-                                            LogbookEntryRow(
-                                                entry: entry,
-                                                isFavorite: isFavorite(entry),
+                                        LogbookEntryRow(
+                                            entry: entry,
+                                            isFavorite: isFavorite(entry),
 
-                                                isSelecting: isSelecting,
-                                                isSelected: selectedEntries.contains(entry),
+                                            isSelecting: isSelecting,
+                                            isSelected: selectedEntries.contains(entry),
 
-                                                toggleFavorite: {
-                                                    toggleFavorite(entry)
-                                                },
+                                            toggleFavorite: {
+                                                toggleFavorite(entry)
+                                            },
 
-                                                toggleSelection: {
+                                            toggleSelection: {
 
-                                                    if selectedEntries.contains(entry) {
-                                                        selectedEntries.remove(entry)
-                                                    } else {
-                                                        selectedEntries.insert(entry)
-                                                    }
-
+                                                if selectedEntries.contains(entry) {
+                                                    selectedEntries.remove(entry)
+                                                } else {
+                                                    selectedEntries.insert(entry)
                                                 }
-                                            )
-                                            .listRowBackground(Color.wwCardBackground)
 
-                                        }
-                                        .onDelete { indexSet in
-
-                                            for index in indexSet {
-                                                modelContext.delete(mealEntries[index])
                                             }
+                                        )
+                                        .cardRow()
 
-                                            try? modelContext.save()
+                                    }
+                                    .onDelete { indexSet in
 
+                                        for index in indexSet {
+                                            modelContext.delete(mealEntries[index])
                                         }
 
-                                    } header: {
-                                        Text(meal.rawValue)
-                                            .font(.caption.bold())
-                                            .foregroundStyle(Color.wwSecondaryText)
+                                        try? modelContext.save()
+
                                     }
 
                                 }
 
                             }
 
-                        } header: {
-                            Text(day.formatted(date: .abbreviated, time: .omitted))
-                                .font(.subheadline.bold())
-                                .foregroundStyle(Color.wwDarkAccent)
                         }
 
                     }
 
-                    Section {
+                    if showsTraining {
+
+                        trainingLabelRow
 
                         ForEach(sortedTrainings) { training in
 
@@ -122,7 +136,7 @@ struct LogbookView: View {
                                     .foregroundStyle(Color.wwSecondaryText)
 
                             }
-                            .listRowBackground(Color.wwCardBackground)
+                            .cardRow()
 
                         }
                         .onDelete { indexSet in
@@ -135,15 +149,11 @@ struct LogbookView: View {
 
                         }
 
-                    } header: {
-                        Text("Training")
-                            .font(.subheadline.bold())
-                            .foregroundStyle(Color.wwDarkAccent)
                     }
 
                 }
+                .listStyle(.plain)
                 .scrollContentBackground(.hidden)
-                .listRowSeparatorTint(Color.wwDarkAccent.opacity(0.15))
 
             }
             .navigationTitle("Logboek")
@@ -204,6 +214,112 @@ struct LogbookView: View {
 
     }
 
+    // MARK: - Filter
+
+    private var filterRow: some View {
+        Picker("Filter", selection: $selectedFilter) {
+            ForEach(LogFilter.allCases) { filter in
+                Text(filter.rawValue).tag(filter)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.vertical, 4)
+        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+
+    // MARK: - Label-rijen (bewust gewone rijen i.p.v. Section-headers, zodat de kleur altijd klopt)
+
+    private func mealLabelRow(_ meal: MealCategory) -> some View {
+        Text(meal.rawValue)
+            .font(.caption.bold())
+            .foregroundStyle(Color.wwTeal)
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 2, trailing: 16))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+    }
+
+    private var trainingLabelRow: some View {
+        Text("Training")
+            .font(.subheadline.bold())
+            .foregroundStyle(Color.wwDarkAccent)
+            .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 4, trailing: 16))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+    }
+
+    // MARK: - Dagstatus (ziek / vakantie / rustdag)
+
+    private func status(for day: Date) -> DayStatus? {
+        dayStatuses.first { Calendar.current.isDate($0.date, inSameDayAs: day) }
+    }
+
+    private func setStatus(_ type: DayStatusType?, for day: Date) {
+        if let existing = status(for: day) {
+            modelContext.delete(existing)
+        }
+
+        if let type {
+            let newStatus = DayStatus(date: day, type: type)
+            modelContext.insert(newStatus)
+        }
+
+        try? modelContext.save()
+    }
+
+    private func dayLabelRow(for day: Date) -> some View {
+        let currentStatus = status(for: day)
+
+        return HStack(spacing: 6) {
+
+            Text(day.formatted(date: .abbreviated, time: .omitted))
+                .font(.subheadline.bold())
+                .foregroundStyle(Color.wwDarkAccent)
+
+            if let currentStatus {
+                HStack(spacing: 3) {
+                    Image(systemName: currentStatus.type.icon)
+                    Text(currentStatus.type.rawValue)
+                }
+                .font(.caption2.bold())
+                .foregroundStyle(Color.wwOrange)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.wwOrange.opacity(0.15))
+                .clipShape(Capsule())
+            }
+
+            Spacer()
+
+            Menu {
+
+                ForEach(DayStatusType.allCases) { type in
+                    Button {
+                        setStatus(type, for: day)
+                    } label: {
+                        Label(type.rawValue, systemImage: type.icon)
+                    }
+                }
+
+                if currentStatus != nil {
+                    Divider()
+                    Button("Normaal (verwijder markering)", role: .destructive) {
+                        setStatus(nil, for: day)
+                    }
+                }
+
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .foregroundStyle(Color.wwSecondaryText)
+            }
+
+        }
+        .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 4, trailing: 16))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+
     private func isFavorite(_ entry: FoodLogEntry) -> Bool {
 
         favorites.contains {
@@ -238,4 +354,18 @@ struct LogbookView: View {
 
     }
 
+}
+
+// MARK: - Kaart-stijl voor losse rijen in een List (Favorieten-achtige zwevende kaart)
+
+private extension View {
+    func cardRow() -> some View {
+        self
+            .padding(14)
+            .background(Color.wwCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+    }
 }

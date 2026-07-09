@@ -25,76 +25,90 @@ struct CopyMealsView: View {
     
     var body: some View {
         NavigationStack {
-            List {
-                
-                Section {
+            ZStack {
+
+                DumbbellPatternBackground()
+
+                List {
+
                     VStack(alignment: .leading, spacing: 4) {
                         Text(dayTitle)
                             .font(.headline)
-                        
+                            .foregroundStyle(Color.wwDarkAccent)
+
                         Text(selectedDate.formatted(date: .abbreviated, time: .omitted))
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.wwSecondaryText)
                     }
-                    .padding(.vertical, 4)
-                }
-                
-                if groupedMeals.isEmpty {
-                    
-                    ContentUnavailableView(
-                        "Geen maaltijden gevonden",
-                        systemImage: "fork.knife",
-                        description: Text("Er zijn geen maaltijden gelogd op deze datum.")
-                    )
-                    
-                } else {
-                    
-                    Section("Maaltijden") {
-                        
+                    .cardRow()
+
+                    if groupedMeals.isEmpty {
+
+                        WWPlaceholderCard(
+                            icon: "fork.knife",
+                            color: .wwOrange,
+                            title: "Geen maaltijden gevonden",
+                            message: "Er zijn geen maaltijden gelogd op deze datum."
+                        )
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+
+                    } else {
+
+                        Text("Maaltijden")
+                            .font(.caption.bold())
+                            .foregroundStyle(Color.wwSecondaryText)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 2, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+
                         ForEach(groupedMeals, id: \.0) { meal in
-                            
+
                             NavigationLink {
-                                
+
                                 CopyMealDetailView(
                                     meal: meal.0,
                                     entries: meal.1,
                                     onFinished: { dismiss() }
                                 )
-                                
+
                             } label: {
-                                
+
                                 HStack {
-                                    
+
                                     Text(meal.0.rawValue)
                                         .font(.headline)
-                                    
+                                        .foregroundStyle(Color.wwDarkAccent)
+
                                     Spacer()
-                                    
+
                                     Text("(\(meal.1.count))")
-                                        .foregroundStyle(.secondary)
-                                    
+                                        .foregroundStyle(Color.wwSecondaryText)
+
                                 }
-                                .padding(.vertical, 6)
-                                
+
                             }
-                            
+                            .cardRow()
+
                         }
-                        
+
                     }
-                    
-                }
-                
-                Section {
-                    
+
                     Button {
                         showingDatePicker.toggle()
                     } label: {
                         Label("Andere datum", systemImage: "calendar")
                     }
-                    
+                    .foregroundStyle(Color.wwTeal)
+                    .cardRow()
+
                 }
-                
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+
             }
+            .tint(Color.wwOrange)
             .navigationTitle("Kopieer maaltijd")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -106,17 +120,27 @@ struct CopyMealsView: View {
             }
             .sheet(isPresented: $showingDatePicker) {
                 NavigationStack {
-                    VStack {
-                        DatePicker(
-                            "Datum",
-                            selection: $selectedDate,
-                            in: ...Date(),
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.graphical)
-                        .padding()
-                        
-                        Spacer()
+                    ZStack {
+
+                        DumbbellPatternBackground()
+
+                        VStack {
+                            DatePicker(
+                                "Datum",
+                                selection: $selectedDate,
+                                in: ...Date(),
+                                displayedComponents: .date
+                            )
+                            .datePickerStyle(.graphical)
+                            .tint(Color.wwOrange)
+                            .padding()
+                            .background(Color.wwCardBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .padding()
+
+                            Spacer()
+                        }
+
                     }
                     .navigationTitle("Kies datum")
                     .navigationBarTitleDisplayMode(.inline)
@@ -162,43 +186,51 @@ struct CopyMealDetailView: View {
     let onFinished: () -> Void
 
     @Environment(\.modelContext) private var modelContext
-    @State private var selectedEntries: Set<FoodLogEntry>
+    @State private var selectedEntries: Set<FoodLogEntry> = []
 
     init(meal: MealCategory, entries: [FoodLogEntry], onFinished: @escaping () -> Void) {
         self.meal = meal
         self.entries = entries
         self.onFinished = onFinished
-        _selectedEntries = State(initialValue: Set(entries))
     }
 
     var body: some View {
-        List {
-            ForEach(entries) { entry in
-                Button {
-                    toggle(entry)
-                } label: {
-                    HStack(spacing: 12) {
+        ZStack {
 
-                        Image(systemName: selectedEntries.contains(entry) ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(selectedEntries.contains(entry) ? Color.wwTeal : Color.secondary)
+            DumbbellPatternBackground()
 
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.name)
-                                .font(.subheadline.bold())
-                                .foregroundStyle(Color.wwDarkAccent)
+            List {
+                ForEach(entries) { entry in
+                    Button {
+                        toggle(entry)
+                    } label: {
+                        HStack(spacing: 12) {
 
-                            Text("\(entry.grams.roundedInt) g • \(entry.calories.roundedInt) kcal")
-                                .font(.caption)
-                                .foregroundStyle(Color.wwSecondaryText)
+                            Image(systemName: selectedEntries.contains(entry) ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(selectedEntries.contains(entry) ? Color.wwTeal : Color.wwSecondaryText)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.name)
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(Color.wwDarkAccent)
+
+                                Text("\(entry.grams.roundedInt) g • \(entry.calories.roundedInt) kcal")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.wwSecondaryText)
+                            }
+
+                            Spacer()
+
                         }
-
-                        Spacer()
-
+                        .contentShape(Rectangle())
                     }
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .cardRow()
                 }
-                .buttonStyle(.plain)
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+
         }
         .navigationTitle(meal.rawValue)
         .navigationBarTitleDisplayMode(.inline)
@@ -248,6 +280,20 @@ struct CopyMealDetailView: View {
         try? modelContext.save()
 
         onFinished()
+    }
+}
+
+// MARK: - Kaart-stijl voor losse rijen in een List (Favorieten-achtige zwevende kaart)
+
+private extension View {
+    func cardRow() -> some View {
+        self
+            .padding(14)
+            .background(Color.wwCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
     }
 }
 

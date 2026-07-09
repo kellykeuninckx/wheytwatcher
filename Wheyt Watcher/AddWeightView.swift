@@ -22,34 +22,50 @@ struct AddWeightView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Gewicht") {
-                    HStack {
-                        Text("Vandaag")
-                        Spacer()
-                        TextField("kg", value: $weightKg, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                        Text("kg")
-                    }
-                }
+            ZStack {
 
-                Section("Vetpercentage (optioneel)") {
-                    HStack {
-                        TextField("bv. 18", text: $bodyFatText)
-                            .keyboardType(.decimalPad)
-                        Text("%")
-                    }
-                }
+                DumbbellPatternBackground()
 
-                Section("Activiteit") {
-                    Picker("Activiteit", selection: $activityLevel) {
-                        ForEach(ActivityLevel.allCases) { option in
-                            Text(option.rawValue).tag(option)
+                Form {
+                    Section("Gewicht") {
+                        HStack {
+                            Text("Vandaag")
+                                .foregroundStyle(Color.wwDarkAccent)
+                            Spacer()
+                            TextField("kg", value: $weightKg, format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .foregroundStyle(Color.wwDarkAccent)
+                            Text("kg")
+                                .foregroundStyle(Color.wwSecondaryText)
                         }
                     }
+                    .listRowBackground(Color.wwCardBackground)
+
+                    Section("Vetpercentage (optioneel)") {
+                        HStack {
+                            TextField("bv. 18", text: $bodyFatText)
+                                .keyboardType(.decimalPad)
+                                .foregroundStyle(Color.wwDarkAccent)
+                            Text("%")
+                                .foregroundStyle(Color.wwSecondaryText)
+                        }
+                    }
+                    .listRowBackground(Color.wwCardBackground)
+
+                    Section("Activiteit") {
+                        Picker("Activiteit", selection: $activityLevel) {
+                            ForEach(ActivityLevel.allCases) { option in
+                                Text(option.rawValue).tag(option)
+                            }
+                        }
+                    }
+                    .listRowBackground(Color.wwCardBackground)
                 }
+                .scrollContentBackground(.hidden)
+
             }
+            .tint(Color.wwTeal)
             .navigationTitle("Gewicht loggen")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

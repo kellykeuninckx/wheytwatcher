@@ -5,6 +5,8 @@ struct AddFoodView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
+    var prefilledBarcode: String? = nil
+
     @State private var name = ""
     @State private var mealCategory: MealCategory = .breakfast
     @State private var grams = 100.0
@@ -17,46 +19,70 @@ struct AddFoodView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Product") {
-                    TextField("Naam", text: $name)
+            ZStack {
 
-                    Picker("Moment", selection: $mealCategory) {
-                        ForEach(MealCategory.allCases) { category in
-                            Text(category.rawValue).tag(category)
+                DumbbellPatternBackground()
+
+                Form {
+                    Section("Product") {
+                        TextField("Naam", text: $name)
+                            .foregroundStyle(Color.wwDarkAccent)
+
+                        Picker("Moment", selection: $mealCategory) {
+                            ForEach(MealCategory.allCases) { category in
+                                Text(category.rawValue).tag(category)
+                            }
+                        }
+
+                        HStack {
+                            Text("Hoeveelheid")
+                                .foregroundStyle(Color.wwDarkAccent)
+                            Spacer()
+                            TextField("gram", value: $grams, format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .foregroundStyle(Color.wwDarkAccent)
+                            Text("g")
+                                .foregroundStyle(Color.wwSecondaryText)
+                        }
+
+                        if prefilledBarcode != nil {
+                            Text("Wordt gekoppeld aan deze barcode, zodat je 'm de volgende keer meteen kan scannen.")
+                                .font(.caption)
+                                .foregroundStyle(Color.wwSecondaryText)
                         }
                     }
+                    .listRowBackground(Color.wwCardBackground)
 
-                    HStack {
-                        Text("Hoeveelheid")
-                        Spacer()
-                        TextField("gram", value: $grams, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                        Text("g")
+                    Section("Per 100 gram") {
+                        numberField("Calorieën", value: $caloriesPer100g, unit: "kcal")
+                        numberField("Eiwit", value: $proteinPer100g, unit: "g")
+                        numberField("Koolhydraten", value: $carbsPer100g, unit: "g")
+                        numberField("Vet", value: $fatPer100g, unit: "g")
+                        numberField("Vezels", value: $fiberPer100g, unit: "g")
                     }
-                }
+                    .listRowBackground(Color.wwCardBackground)
 
-                Section("Per 100 gram") {
-                    numberField("Calorieën", value: $caloriesPer100g, unit: "kcal")
-                    numberField("Eiwit", value: $proteinPer100g, unit: "g")
-                    numberField("Koolhydraten", value: $carbsPer100g, unit: "g")
-                    numberField("Vet", value: $fatPer100g, unit: "g")
-                    numberField("Vezels", value: $fiberPer100g, unit: "g")
-                }
+                    Section("Totaal") {
+                        Text("\(scaled(caloriesPer100g).roundedInt) kcal")
+                        Text("\(scaled(proteinPer100g).roundedInt) g eiwit")
+                        Text("\(scaled(carbsPer100g).roundedInt) g koolhydraten")
+                        Text("\(scaled(fatPer100g).roundedInt) g vet")
+                        Text("\(scaled(fiberPer100g).roundedInt) g vezels")
+                    }
+                    .foregroundStyle(Color.wwDarkAccent)
+                    .listRowBackground(Color.wwCardBackground)
 
-                Section("Totaal") {
-                    Text("\(scaled(caloriesPer100g).roundedInt) kcal")
-                    Text("\(scaled(proteinPer100g).roundedInt) g eiwit")
-                    Text("\(scaled(carbsPer100g).roundedInt) g koolhydraten")
-                    Text("\(scaled(fatPer100g).roundedInt) g vet")
-                    Text("\(scaled(fiberPer100g).roundedInt) g vezels")
+                    Section("Notitie optioneel") {
+                        TextField("Bijv. veel zout, andere portie, uit eten", text: $note)
+                            .foregroundStyle(Color.wwDarkAccent)
+                    }
+                    .listRowBackground(Color.wwCardBackground)
                 }
+                .scrollContentBackground(.hidden)
 
-                Section("Notitie optioneel") {
-                    TextField("Bijv. veel zout, andere portie, uit eten", text: $note)
-                }
             }
+            .tint(Color.wwTeal)
             .navigationTitle("Eten toevoegen")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -78,11 +104,14 @@ struct AddFoodView: View {
     private func numberField(_ title: String, value: Binding<Double>, unit: String) -> some View {
         HStack {
             Text(title)
+                .foregroundStyle(Color.wwDarkAccent)
             Spacer()
             TextField(title, value: value, format: .number)
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
+                .foregroundStyle(Color.wwDarkAccent)
             Text(unit)
+                .foregroundStyle(Color.wwSecondaryText)
         }
     }
 
@@ -107,7 +136,22 @@ struct AddFoodView: View {
         )
 
         modelContext.insert(entry)
+
+        if let barcode = prefilledBarcode {
+            let product = FoodProduct(
+                name: name,
+                barcode: barcode,
+                caloriesPer100g: caloriesPer100g,
+                proteinPer100g: proteinPer100g,
+                carbsPer100g: carbsPer100g,
+                fatPer100g: fatPer100g,
+                fiberPer100g: fiberPer100g
+            )
+            modelContext.insert(product)
+        }
+
+        try? modelContext.save()
+
         dismiss()
     }
 }
-

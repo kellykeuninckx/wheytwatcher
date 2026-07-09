@@ -47,13 +47,9 @@ struct MealsView: View {
                                                 .font(.headline)
                                                 .foregroundStyle(Color.wwDarkAccent)
 
-                                            Text("\(meal.items.count) ingrediënten")
+                                            Text("\(meal.items.count) ingrediënten • \(Int(meal.items.reduce(0) { $0 + $1.calories })) kcal")
                                                 .font(.subheadline)
                                                 .foregroundStyle(Color.wwSecondaryText)
-
-                                            Text("\(Int(meal.items.reduce(0) { $0 + $1.calories })) kcal")
-                                                .font(.subheadline)
-                                                   .foregroundStyle(Color.wwSecondaryText)
 
                                         }
 
@@ -64,6 +60,7 @@ struct MealsView: View {
                                             .foregroundStyle(Color.wwSecondaryText)
 
                                     }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                     .wwCard()
 
                                 }

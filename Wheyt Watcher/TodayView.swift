@@ -19,6 +19,7 @@ struct TodayView: View {
     @State private var showingFavorites = false
     @State private var showingMeals = false
     @State private var showingBarcodeScanner = false
+    @State private var showingFoodSearch = false
     @State private var showingLogbook = false
     @State private var showingProfile = false
     @State private var showingQuickAddMenu = false
@@ -215,6 +216,9 @@ struct TodayView: View {
 
             .sheet(isPresented: $showingBarcodeScanner) {
                 BarcodeScannerView()
+            }
+            .sheet(isPresented: $showingFoodSearch) {
+                FoodSearchView()
             }
             .sheet(isPresented: $showingLogbook) {
                 LogbookView()
@@ -487,6 +491,9 @@ struct TodayView: View {
             },
             QuickAddOption(icon: "barcode.viewfinder", title: "Scan barcode") {
                 showingBarcodeScanner = true
+            },
+            QuickAddOption(icon: "magnifyingglass", title: "Zoek product") {
+                showingFoodSearch = true
             },
             QuickAddOption(icon: "square.and.pencil", title: "Voeg handmatig toe") {
                 showingAddFood = true

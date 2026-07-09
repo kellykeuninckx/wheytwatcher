@@ -3,6 +3,11 @@ import SwiftData
 
 @main
 struct WheytWatcherApp: App {
+
+    init() {
+        configureTabBarAppearance()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -22,6 +27,26 @@ struct WheytWatcherApp: App {
             DayStatus.self,
             BodyMeasurementLog.self
         ])
+    }
+
+    /// Moet zo vroeg mogelijk gebeuren — UIAppearance-proxy-instellingen worden alleen
+    /// toegepast op tabbalken die ná dit moment worden aangemaakt.
+    private func configureTabBarAppearance() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithDefaultBackground()
+
+        let activeColor = UIColor(Color.wwTeal)
+        let inactiveColor = UIColor(Color.wwMint.opacity(0.45))
+
+        for style in [appearance.stackedLayoutAppearance, appearance.inlineLayoutAppearance, appearance.compactInlineLayoutAppearance] {
+            style.selected.iconColor = activeColor
+            style.selected.titleTextAttributes = [.foregroundColor: activeColor]
+            style.normal.iconColor = inactiveColor
+            style.normal.titleTextAttributes = [.foregroundColor: inactiveColor]
+        }
+
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
     }
 }
 //

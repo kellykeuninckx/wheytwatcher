@@ -31,16 +31,8 @@ struct CopyMealsView: View {
 
                 List {
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(dayTitle)
-                            .font(.headline)
-                            .foregroundStyle(Color.wwDarkAccent)
-
-                        Text(selectedDate.formatted(date: .abbreviated, time: .omitted))
-                            .font(.caption)
-                            .foregroundStyle(Color.wwSecondaryText)
-                    }
-                    .cardRow()
+                    dateNavigator
+                        .cardRow()
 
                     if groupedMeals.isEmpty {
 
@@ -95,14 +87,6 @@ struct CopyMealsView: View {
 
                     }
 
-                    Button {
-                        showingDatePicker.toggle()
-                    } label: {
-                        Label("Andere datum", systemImage: "calendar")
-                    }
-                    .foregroundStyle(Color.wwTeal)
-                    .cardRow()
-
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -156,11 +140,64 @@ struct CopyMealsView: View {
         }
     }
     
+    private var isToday: Bool {
+        Calendar.current.isDateInToday(selectedDate)
+    }
+
     private var dayTitle: String {
-        if Calendar.current.isDateInYesterday(selectedDate) {
+        if isToday {
+            return "Vandaag"
+        } else if Calendar.current.isDateInYesterday(selectedDate) {
             return "Gisteren"
         } else {
             return selectedDate.formatted(.dateTime.weekday(.wide))
+        }
+    }
+
+    private var dateNavigator: some View {
+        HStack {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
+                }
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(Color.wwTeal)
+                    .padding(4)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            VStack(spacing: 0) {
+                Text(dayTitle)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.wwDarkAccent)
+
+                Text(selectedDate, format: .dateTime.day().month(.wide))
+                    .font(.caption)
+                    .foregroundStyle(Color.wwDarkAccent.opacity(0.5))
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                showingDatePicker = true
+            }
+
+            Spacer()
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    selectedDate = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
+                }
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.title3.bold())
+                    .foregroundStyle(isToday ? Color.wwDarkAccent.opacity(0.2) : Color.wwTeal)
+                    .padding(4)
+            }
+            .buttonStyle(.plain)
+            .disabled(isToday)
         }
     }
     

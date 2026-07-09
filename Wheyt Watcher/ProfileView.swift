@@ -12,6 +12,18 @@ struct ProfileView: View {
     @State private var showingDeleteConfirmation = false
     @State private var showingAddRestDay = false
 
+    @AppStorage("wwShowBodyMeasurementsChart") private var showBodyMeasurementsChart = false
+    @AppStorage("wwReminderEveningLog") private var reminderEveningLog = true
+    @AppStorage("wwReminderWeeklyWeighIn") private var reminderWeeklyWeighIn = true
+    @AppStorage("wwReminderGoalEnding") private var reminderGoalEnding = true
+    @AppStorage("wwWeighInWeekday") private var weighInWeekday = 2
+
+    private var weekdayOptions: [(value: Int, name: String)] {
+        Calendar.current.weekdaySymbols.enumerated().map { index, name in
+            (value: index + 1, name: name.capitalized)
+        }
+    }
+
     var body: some View {
 
         NavigationStack {
@@ -33,6 +45,8 @@ struct ProfileView: View {
                         }
 
                         restDaySection
+
+                        settingsSection
 
                         deleteDataSection
 
@@ -267,6 +281,64 @@ struct ProfileView: View {
             }
 
         }
+        .wwCard()
+    }
+
+    // MARK: - Instellingen (lichaamsmaten-grafiek + herinneringen)
+
+    private var settingsSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+
+            Text("Instellingen")
+                .font(.headline)
+                .foregroundStyle(Color.wwDarkAccent)
+
+            Toggle("Toon lichaamsmaten in Progressie", isOn: $showBodyMeasurementsChart)
+                .tint(Color.wwTeal)
+                .foregroundStyle(Color.wwDarkAccent)
+
+            Divider()
+
+            Text("Herinneringen")
+                .font(.subheadline.bold())
+                .foregroundStyle(Color.wwDarkAccent)
+
+            Toggle("Nog niet gelogd (18:00)", isOn: $reminderEveningLog)
+                .tint(Color.wwTeal)
+                .foregroundStyle(Color.wwDarkAccent)
+                .onChange(of: reminderEveningLog) {
+                    ReminderManager.setEveningLogReminderEnabled(reminderEveningLog)
+                }
+
+            Toggle("Wekelijkse gewicht-herinnering", isOn: $reminderWeeklyWeighIn)
+                .tint(Color.wwTeal)
+                .foregroundStyle(Color.wwDarkAccent)
+                .onChange(of: reminderWeeklyWeighIn) {
+                    ReminderManager.setWeeklyWeighInReminderEnabled(reminderWeeklyWeighIn, weekday: weighInWeekday)
+                }
+
+            if reminderWeeklyWeighIn {
+                Picker("Wegdag", selection: $weighInWeekday) {
+                    ForEach(weekdayOptions, id: \.value) { option in
+                        Text(option.name).tag(option.value)
+                    }
+                }
+                .tint(Color.wwTeal)
+                .foregroundStyle(Color.wwDarkAccent)
+                .onChange(of: weighInWeekday) {
+                    ReminderManager.setWeeklyWeighInReminderEnabled(reminderWeeklyWeighIn, weekday: weighInWeekday)
+                }
+            }
+
+            Toggle("Doelperiode loopt bijna af", isOn: $reminderGoalEnding)
+                .tint(Color.wwTeal)
+                .foregroundStyle(Color.wwDarkAccent)
+                .onChange(of: reminderGoalEnding) {
+                    ReminderManager.setGoalEndingReminderEnabled(reminderGoalEnding, period: profile.activeGoalPeriod)
+                }
+
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .wwCard()
     }
 

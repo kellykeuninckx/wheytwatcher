@@ -17,7 +17,10 @@ struct WheytWatcherApp: App {
             DailyTargetSnapshot.self,
             FavoriteFood.self,
             SavedMeal.self,
-            MealItem.self
+            MealItem.self,
+            GoalPeriod.self,
+            DayStatus.self,
+            BodyMeasurementLog.self
         ])
     }
 }
@@ -27,4 +30,3 @@ struct WheytWatcherApp: App {
 //
 //  Created by Kelly Keuninckx on 03/07/2026.
 //
-

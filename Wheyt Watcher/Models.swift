@@ -463,6 +463,57 @@ final class WeightLog {
     }
 }
 
+enum BodyMeasurementType: String, CaseIterable, Identifiable {
+    case waist = "Taille"
+    case chest = "Borst"
+    case hips = "Heupen"
+    case arm = "Arm"
+    case thigh = "Dijbeen"
+
+    var id: String { rawValue }
+}
+
+/// Eén rij per meetmoment. Alle velden optioneel — net als vetpercentage vul je alleen in wat je wil bijhouden.
+@Model
+final class BodyMeasurementLog {
+    var date: Date
+    var waistCm: Double?
+    var chestCm: Double?
+    var hipsCm: Double?
+    var armCm: Double?
+    var thighCm: Double?
+
+    init(
+        date: Date,
+        waistCm: Double? = nil,
+        chestCm: Double? = nil,
+        hipsCm: Double? = nil,
+        armCm: Double? = nil,
+        thighCm: Double? = nil
+    ) {
+        self.date = date
+        self.waistCm = waistCm
+        self.chestCm = chestCm
+        self.hipsCm = hipsCm
+        self.armCm = armCm
+        self.thighCm = thighCm
+    }
+
+    func value(for type: BodyMeasurementType) -> Double? {
+        switch type {
+        case .waist: return waistCm
+        case .chest: return chestCm
+        case .hips: return hipsCm
+        case .arm: return armCm
+        case .thigh: return thighCm
+        }
+    }
+
+    var hasAnyValue: Bool {
+        waistCm != nil || chestCm != nil || hipsCm != nil || armCm != nil || thighCm != nil
+    }
+}
+
 enum DayStatusType: String, Codable, CaseIterable, Identifiable {
     case sick = "Ziek"
     case vacation = "Vakantie"

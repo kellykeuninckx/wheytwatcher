@@ -11,11 +11,16 @@ struct ProgressViewScreen: View {
     @Query(sort: \TrainingSession.date) private var trainings: [TrainingSession]
     @Query(sort: \DailyTargetSnapshot.date) private var snapshots: [DailyTargetSnapshot]
     @Query private var dayStatuses: [DayStatus]
+    @Query(sort: \BodyMeasurementLog.date) private var measurementLogs: [BodyMeasurementLog]
+
+    @AppStorage("wwShowBodyMeasurementsChart") private var showBodyMeasurementsChart = false
 
     @State private var selectedRange: ChartRange = .twoWeeks
     @State private var showingEnlargedWeight = false
     @State private var showingEnlargedCalories = false
     @State private var showingEnlargedProtein = false
+    @State private var selectedMeasurementType: BodyMeasurementType = .waist
+    @State private var showingEnlargedMeasurement = false
 
     enum ChartRange: String, CaseIterable, Identifiable {
         case twoWeeks = "14 dagen"
@@ -44,6 +49,10 @@ struct ProgressViewScreen: View {
 
     private var filteredWeights: [WeightLog] {
         weightLogs.filter { $0.date >= rangeStartDate }
+    }
+
+    private var filteredMeasurementLogs: [BodyMeasurementLog] {
+        measurementLogs.filter { $0.date >= rangeStartDate }
     }
 
     private var filteredFood: [FoodLogEntry] {
@@ -95,12 +104,39 @@ struct ProgressViewScreen: View {
 
     // MARK: - Gewichtstrend (kleinste-kwadraten regressie)
 
-    private var weightTrendPoints: [(date: Date, value: Double)] {
-        guard filteredWeights.count >= 2,
-              let referenceDate = filteredWeights.first?.date else { return [] }
+    /// Weegmomenten op gemarkeerde dagen (ziek/vakantie/rustdag) tellen niet mee in de trend —
+    /// vaak vocht/ziekte-ruis, geen echte verandering in lichaamssamenstelling.
+    private var trendEligibleWeights: [WeightLog] {
+        let marked = Set(dayStatuses.map { Calendar.current.startOfDay(for: $0.date) })
+        return filteredWeights.filter { !marked.contains(Calendar.current.startOfDay(for: $0.date)) }
+    }
 
-        let xs = filteredWeights.map { $0.date.timeIntervalSince(referenceDate) / 86400 }
-        let ys = filteredWeights.map { $0.weightKg }
+    /// Voortschrijdend (exponentieel) gemiddelde, zodat een piek van een paar dagen de trend niet
+    /// laat schrikken — dezelfde aanpak die apps als Trendweight/Libra gebruiken.
+    private func smoothedPoints(from logs: [WeightLog], alpha: Double = 0.2) -> [(date: Date, value: Double)] {
+        let sorted = logs.sorted { $0.date < $1.date }
+        guard !sorted.isEmpty else { return [] }
+
+        var result: [(date: Date, value: Double)] = []
+        var previous = sorted[0].weightKg
+
+        for (index, log) in sorted.enumerated() {
+            let smoothed = index == 0 ? log.weightKg : alpha * log.weightKg + (1 - alpha) * previous
+            previous = smoothed
+            result.append((date: log.date, value: smoothed))
+        }
+
+        return result
+    }
+
+    private var weightTrendPoints: [(date: Date, value: Double)] {
+        let smoothed = smoothedPoints(from: trendEligibleWeights)
+
+        guard smoothed.count >= 2,
+              let referenceDate = smoothed.first?.date else { return [] }
+
+        let xs = smoothed.map { $0.date.timeIntervalSince(referenceDate) / 86400 }
+        let ys = smoothed.map { $0.value }
 
         let n = Double(xs.count)
         let sumX = xs.reduce(0, +)
@@ -115,8 +151,8 @@ struct ProgressViewScreen: View {
         let intercept = (sumY - slope * sumX) / n
 
         return [
-            (date: filteredWeights.first!.date, value: slope * firstX + intercept),
-            (date: filteredWeights.last!.date, value: slope * lastX + intercept)
+            (date: smoothed.first!.date, value: slope * firstX + intercept),
+            (date: smoothed.last!.date, value: slope * lastX + intercept)
         ]
     }
 
@@ -144,6 +180,10 @@ struct ProgressViewScreen: View {
                         }
 
                         caloriesCard
+
+                        if showBodyMeasurementsChart && !filteredMeasurementLogs.isEmpty {
+                            bodyMeasurementsCard
+                        }
                     }
                     .padding(.horizontal, 12)
                     .padding(.bottom, 24)
@@ -219,6 +259,29 @@ struct ProgressViewScreen: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingEnlargedMeasurement) {
+                EnlargedChartSheet(title: selectedMeasurementType.rawValue) {
+                    Chart {
+                        measurementChartMarks
+                    }
+                    .chartXAxis {
+                        AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
+                            AxisGridLine()
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.15))
+                            AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.7))
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks { _ in
+                            AxisGridLine()
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.1))
+                            AxisValueLabel()
+                                .foregroundStyle(Color.wwDarkAccent.opacity(0.7))
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -260,6 +323,11 @@ struct ProgressViewScreen: View {
             return ("🥩", "Je haalde deze week \(adherence.met) van de \(adherence.total) dagen je eiwitdoel.")
 
         case .gewicht:
+            if let sudden = suddenWeightChange {
+                let direction = sudden.kg < 0 ? "gedaald" : "gestegen"
+                return ("💧", "Je gewicht is de afgelopen \(sudden.days) dagen best snel \(direction) (\(formattedOneDecimal(sudden.kg)) kg). Dat is meestal vocht of even minder fit zijn, geen echte verandering — je onderliggende trend telt, niet deze ene meting.")
+            }
+
             guard let rate = weeklyWeightChangeRate, abs(rate) >= 0.05 else { return nil }
             let verb = rate < 0 ? "verliest" : "wint"
             return ("⚖️", "Je \(verb) gemiddeld \(formattedOneDecimal(rate)) kg per week.")
@@ -394,12 +462,17 @@ struct ProgressViewScreen: View {
 
     private var weeklyWeightChangeRate: Double? {
         let sixWeeksAgo = Calendar.current.date(byAdding: .day, value: -42, to: Date()) ?? Date.distantPast
-        let recentWeights = weightLogs.filter { $0.date >= sixWeeksAgo }
+        let marked = Set(dayStatuses.map { Calendar.current.startOfDay(for: $0.date) })
+        let recentWeights = weightLogs.filter {
+            $0.date >= sixWeeksAgo && !marked.contains(Calendar.current.startOfDay(for: $0.date))
+        }
 
-        guard recentWeights.count >= 2, let referenceDate = recentWeights.first?.date else { return nil }
+        let smoothed = smoothedPoints(from: recentWeights)
 
-        let xs = recentWeights.map { $0.date.timeIntervalSince(referenceDate) / 86400 }
-        let ys = recentWeights.map { $0.weightKg }
+        guard smoothed.count >= 2, let referenceDate = smoothed.first?.date else { return nil }
+
+        let xs = smoothed.map { $0.date.timeIntervalSince(referenceDate) / 86400 }
+        let ys = smoothed.map { $0.value }
 
         let n = Double(xs.count)
         let sumX = xs.reduce(0, +)
@@ -412,6 +485,27 @@ struct ProgressViewScreen: View {
 
         let slopePerDay = (n * sumXY - sumX * sumY) / denominator
         return slopePerDay * 7
+    }
+
+    /// Detecteert een opvallend snelle verandering (bv. door ziekte/vocht) in de laatste 5 dagen,
+    /// zodat de coach een geruststellend bericht kan geven i.p.v. het gewone weekgemiddelde.
+    private var suddenWeightChange: (kg: Double, days: Int)? {
+        let calendar = Calendar.current
+        let windowStart = calendar.date(byAdding: .day, value: -5, to: Date()) ?? Date.distantPast
+        let marked = Set(dayStatuses.map { calendar.startOfDay(for: $0.date) })
+
+        let recent = weightLogs
+            .filter { $0.date >= windowStart && !marked.contains(calendar.startOfDay(for: $0.date)) }
+            .sorted { $0.date < $1.date }
+
+        guard let first = recent.first, let last = recent.last, first.date != last.date else { return nil }
+
+        let diff = last.weightKg - first.weightKg
+        let days = calendar.dateComponents([.day], from: first.date, to: last.date).day ?? 0
+
+        guard days > 0, days <= 5, abs(diff) >= 1.5 else { return nil }
+
+        return (kg: diff, days: days)
     }
 
     private func formattedOneDecimal(_ value: Double) -> String {
@@ -638,6 +732,108 @@ struct ProgressViewScreen: View {
         .onTapGesture {
             guard !dailyProtein.isEmpty else { return }
             showingEnlargedProtein = true
+        }
+    }
+
+    // MARK: - Lichaamsmaten (optioneel, uit te zetten in Profiel)
+
+    private var availableMeasurementTypes: [BodyMeasurementType] {
+        BodyMeasurementType.allCases.filter { type in
+            filteredMeasurementLogs.contains { $0.value(for: type) != nil }
+        }
+    }
+
+    private var measurementPoints: [(date: Date, value: Double)] {
+        filteredMeasurementLogs.compactMap { log in
+            guard let value = log.value(for: selectedMeasurementType) else { return nil }
+            return (date: log.date, value: value)
+        }
+    }
+
+    @ChartContentBuilder
+    private var measurementChartMarks: some ChartContent {
+        ForEach(measurementPoints, id: \.date) { point in
+            LineMark(
+                x: .value("Datum", point.date, unit: .day),
+                y: .value(selectedMeasurementType.rawValue, point.value)
+            )
+            .foregroundStyle(Color.wwPurple)
+            .symbol(.circle)
+        }
+    }
+
+    private var bodyMeasurementsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Lichaamsmaten")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Color.wwDarkAccent)
+
+                Spacer()
+
+                Menu {
+                    ForEach(availableMeasurementTypes) { type in
+                        Button(type.rawValue) {
+                            selectedMeasurementType = type
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(selectedMeasurementType.rawValue)
+                        Image(systemName: "chevron.down")
+                    }
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.wwPurple)
+                }
+
+                if let latest = measurementPoints.last?.value {
+                    Text("\(latest.roundedInt) cm")
+                        .font(.caption.bold())
+                        .foregroundStyle(Color.wwPurple)
+                }
+            }
+
+            if measurementPoints.isEmpty {
+                WWPlaceholderCard(
+                    icon: "ruler",
+                    color: .wwPurple,
+                    title: "Geen data voor \(selectedMeasurementType.rawValue.lowercased())",
+                    message: "Kies hierboven een andere maat, of log deze bij je volgende weegmoment."
+                )
+            } else {
+                Chart {
+                    measurementChartMarks
+                }
+                .frame(height: 150)
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
+                        AxisGridLine()
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.15))
+                        AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks { _ in
+                        AxisGridLine()
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.1))
+                        AxisValueLabel()
+                            .foregroundStyle(Color.wwDarkAccent.opacity(0.6))
+                    }
+                }
+            }
+        }
+        .wwCard()
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard !measurementPoints.isEmpty else { return }
+            showingEnlargedMeasurement = true
+        }
+        .onAppear {
+            if let first = availableMeasurementTypes.first,
+               !availableMeasurementTypes.contains(selectedMeasurementType) {
+                selectedMeasurementType = first
+            }
         }
     }
 

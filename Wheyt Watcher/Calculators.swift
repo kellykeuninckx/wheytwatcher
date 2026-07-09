@@ -181,7 +181,15 @@ enum AdaptiveCheckInEvaluator {
         let trackableDays = max(14 - markedDays, 1)
         let loggingRate = Double(loggedDays) / Double(trackableDays)
 
-        let recentWeights = weightLogs.filter { $0.date >= windowStart }
+        let markedDaysSet = Set(
+            dayStatuses
+                .filter { $0.date >= windowStart }
+                .map { calendar.startOfDay(for: $0.date) }
+        )
+
+        let recentWeights = weightLogs.filter {
+            $0.date >= windowStart && !markedDaysSet.contains(calendar.startOfDay(for: $0.date))
+        }
         let trainingCount = trainings.filter { $0.date >= windowStart }.count
 
         guard loggingRate >= 0.7, recentWeights.count >= 3 else {
@@ -222,13 +230,26 @@ enum AdaptiveCheckInEvaluator {
         }
     }
 
-    /// Kleinste-kwadraten regressie, geeft kg/week terug.
+    /// Kleinste-kwadraten regressie over een voortschrijdend gemiddelde, geeft kg/week terug.
+    /// Het gemiddelde dempt korte pieken (ziekte/vocht) zodat die het advies niet vertekenen.
     private static func weeklyWeightChangeRate(for weights: [WeightLog]) -> Double? {
         let sorted = weights.sorted { $0.date < $1.date }
-        guard sorted.count >= 2, let referenceDate = sorted.first?.date else { return nil }
+        guard !sorted.isEmpty else { return nil }
 
-        let xs = sorted.map { $0.date.timeIntervalSince(referenceDate) / 86400 }
-        let ys = sorted.map { $0.weightKg }
+        var smoothed: [(date: Date, value: Double)] = []
+        var previous = sorted[0].weightKg
+        let alpha = 0.2
+
+        for (index, log) in sorted.enumerated() {
+            let value = index == 0 ? log.weightKg : alpha * log.weightKg + (1 - alpha) * previous
+            previous = value
+            smoothed.append((date: log.date, value: value))
+        }
+
+        guard smoothed.count >= 2, let referenceDate = smoothed.first?.date else { return nil }
+
+        let xs = smoothed.map { $0.date.timeIntervalSince(referenceDate) / 86400 }
+        let ys = smoothed.map { $0.value }
 
         let n = Double(xs.count)
         let sumX = xs.reduce(0, +)

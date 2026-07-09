@@ -9,6 +9,7 @@ struct FoodSearchView: View {
 
     @State private var query = ""
     @State private var results: [OpenFoodFactsLookupResult] = []
+    @State private var localResults: [LocalFoodItem] = []
     @State private var isSearching = false
     @State private var hasSearchedOnce = false
     @State private var searchTask: Task<Void, Never>?
@@ -40,7 +41,7 @@ struct FoodSearchView: View {
                     )
                     .padding()
 
-                } else if results.isEmpty && !isSearching && hasSearchedOnce {
+                } else if results.isEmpty && localResults.isEmpty && !isSearching && hasSearchedOnce {
 
                     WWPlaceholderCard(
                         icon: "questionmark.circle",
@@ -53,35 +54,81 @@ struct FoodSearchView: View {
                 } else {
 
                     List {
-                        ForEach(Array(results.enumerated()), id: \.offset) { _, result in
-                            Button {
-                                select(result)
-                            } label: {
-                                HStack {
 
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(result.name)
+                        if !localResults.isEmpty {
+
+                            Text("Basisproducten")
+                                .font(.caption.bold())
+                                .foregroundStyle(Color.wwSecondaryText)
+                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 2, trailing: 16))
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+
+                            ForEach(localResults) { item in
+                                Button {
+                                    select(item)
+                                } label: {
+                                    HStack {
+
+                                        Text(item.name)
                                             .font(.subheadline.bold())
                                             .foregroundStyle(Color.wwDarkAccent)
 
-                                        if let brand = result.brand, !brand.trimmingCharacters(in: .whitespaces).isEmpty {
-                                            Text(brand)
-                                                .font(.caption)
-                                                .foregroundStyle(Color.wwSecondaryText)
-                                        }
+                                        Spacer()
+
+                                        Text("\(item.caloriesPer100g.roundedInt) kcal/100g")
+                                            .font(.caption)
+                                            .foregroundStyle(Color.wwSecondaryText)
+
                                     }
-
-                                    Spacer()
-
-                                    Text("\(result.caloriesPer100g.roundedInt) kcal/100g")
-                                        .font(.caption)
-                                        .foregroundStyle(Color.wwSecondaryText)
-
                                 }
+                                .buttonStyle(.plain)
+                                .cardRow()
                             }
-                            .buttonStyle(.plain)
-                            .cardRow()
+
                         }
+
+                        if !results.isEmpty {
+
+                            Text("Merkproducten")
+                                .font(.caption.bold())
+                                .foregroundStyle(Color.wwSecondaryText)
+                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 2, trailing: 16))
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+
+                            ForEach(Array(results.enumerated()), id: \.offset) { _, result in
+                                Button {
+                                    select(result)
+                                } label: {
+                                    HStack {
+
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(result.name)
+                                                .font(.subheadline.bold())
+                                                .foregroundStyle(Color.wwDarkAccent)
+
+                                            if let brand = result.brand, !brand.trimmingCharacters(in: .whitespaces).isEmpty {
+                                                Text(brand)
+                                                    .font(.caption)
+                                                    .foregroundStyle(Color.wwSecondaryText)
+                                            }
+                                        }
+
+                                        Spacer()
+
+                                        Text("\(result.caloriesPer100g.roundedInt) kcal/100g")
+                                            .font(.caption)
+                                            .foregroundStyle(Color.wwSecondaryText)
+
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .cardRow()
+                            }
+
+                        }
+
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
@@ -99,9 +146,12 @@ struct FoodSearchView: View {
                 let trimmed = query.trimmingCharacters(in: .whitespaces)
                 guard !trimmed.isEmpty else {
                     results = []
+                    localResults = []
                     hasSearchedOnce = false
                     return
                 }
+
+                localResults = LocalFoodDatabase.search(trimmed)
 
                 searchTask?.cancel()
                 searchTask = Task {
@@ -111,6 +161,7 @@ struct FoodSearchView: View {
             .onChange(of: query) {
                 searchTask?.cancel()
                 results = []
+                localResults = []
                 hasSearchedOnce = false
             }
             .navigationTitle("Zoek product")
@@ -149,6 +200,19 @@ struct FoodSearchView: View {
                 hasSearchedOnce = true
             }
         }
+    }
+
+    /// Basisproduct uit de lokale lijst: géén barcode, dus niet opgeslagen in de database —
+    /// puur een tijdelijk object om de hoeveelheid/maaltijd-kiezer te vullen.
+    private func select(_ item: LocalFoodItem) {
+        selectedProduct = FoodProduct(
+            name: item.name,
+            caloriesPer100g: item.caloriesPer100g,
+            proteinPer100g: item.proteinPer100g,
+            carbsPer100g: item.carbsPer100g,
+            fatPer100g: item.fatPer100g,
+            fiberPer100g: item.fiberPer100g
+        )
     }
 
     private func select(_ result: OpenFoodFactsLookupResult) {

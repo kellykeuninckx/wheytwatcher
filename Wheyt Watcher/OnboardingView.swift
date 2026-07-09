@@ -17,6 +17,12 @@ struct OnboardingView: View {
 
     @State private var bodyFatText = ""
 
+    @State private var waistText = ""
+    @State private var chestText = ""
+    @State private var hipsText = ""
+    @State private var armText = ""
+    @State private var thighText = ""
+
     @State private var goalMode: GoalMode = .maintenance
 
     @State private var goalPace: GoalPace = .normal
@@ -25,6 +31,15 @@ struct OnboardingView: View {
 
     @State private var durationWeeks: Int = GoalDurationAdvisor.recommendedWeeks(for: .maintenance, pace: .normal)
     @State private var showingDurationInfo = false
+
+    @AppStorage("wwWeighInWeekday") private var weighInWeekday = 2
+    @AppStorage("wwReminderWeeklyWeighIn") private var reminderWeeklyWeighIn = true
+
+    private var weekdayOptions: [(value: Int, name: String)] {
+        Calendar.current.weekdaySymbols.enumerated().map { index, name in
+            (value: index + 1, name: name.capitalized)
+        }
+    }
 
     var body: some View {
 
@@ -117,6 +132,56 @@ struct OnboardingView: View {
                 }
                 .listRowBackground(Color.wwCardBackground)
 
+                Section("Lichaamsmaten (optioneel, in cm)") {
+
+                    HStack {
+                        Text("Taille").foregroundStyle(Color.wwDarkAccent)
+                        Spacer()
+                        TextField("cm", text: $waistText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(Color.wwDarkAccent)
+                    }
+
+                    HStack {
+                        Text("Borst").foregroundStyle(Color.wwDarkAccent)
+                        Spacer()
+                        TextField("cm", text: $chestText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(Color.wwDarkAccent)
+                    }
+
+                    HStack {
+                        Text("Heupen").foregroundStyle(Color.wwDarkAccent)
+                        Spacer()
+                        TextField("cm", text: $hipsText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(Color.wwDarkAccent)
+                    }
+
+                    HStack {
+                        Text("Arm").foregroundStyle(Color.wwDarkAccent)
+                        Spacer()
+                        TextField("cm", text: $armText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(Color.wwDarkAccent)
+                    }
+
+                    HStack {
+                        Text("Dijbeen").foregroundStyle(Color.wwDarkAccent)
+                        Spacer()
+                        TextField("cm", text: $thighText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(Color.wwDarkAccent)
+                    }
+
+                }
+                .listRowBackground(Color.wwCardBackground)
+
                 Section("Doel") {
 
                     Picker(
@@ -193,6 +258,22 @@ struct OnboardingView: View {
                             .frame(width: 280)
                             .presentationCompactAdaptation(.popover)
                     }
+
+                }
+                .listRowBackground(Color.wwCardBackground)
+
+                Section("Wekelijkse weeg-herinnering") {
+
+                    Picker("Wegdag", selection: $weighInWeekday) {
+                        ForEach(weekdayOptions, id: \.value) { option in
+                            Text(option.name).tag(option.value)
+                        }
+                    }
+                    .foregroundStyle(Color.wwDarkAccent)
+
+                    Text("Dagelijks wegen kan natuurlijk ook — dit is puur een wekelijkse herinnering, geen limiet.")
+                        .font(.caption2)
+                        .foregroundStyle(Color.wwSecondaryText)
 
                 }
                 .listRowBackground(Color.wwCardBackground)
@@ -300,6 +381,21 @@ struct OnboardingView: View {
         initialGoalPeriod.profile = profile
 
         modelContext.insert(initialGoalPeriod)
+
+        let measurementLog = BodyMeasurementLog(
+            date: Date(),
+            waistCm: Double(waistText.replacingOccurrences(of: ",", with: ".")),
+            chestCm: Double(chestText.replacingOccurrences(of: ",", with: ".")),
+            hipsCm: Double(hipsText.replacingOccurrences(of: ",", with: ".")),
+            armCm: Double(armText.replacingOccurrences(of: ",", with: ".")),
+            thighCm: Double(thighText.replacingOccurrences(of: ",", with: "."))
+        )
+
+        if measurementLog.hasAnyValue {
+            modelContext.insert(measurementLog)
+        }
+
+        ReminderManager.setWeeklyWeighInReminderEnabled(reminderWeeklyWeighIn, weekday: weighInWeekday)
 
     }
 

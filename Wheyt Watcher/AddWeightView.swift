@@ -5,11 +5,19 @@ struct AddWeightView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
+    @Query(sort: \BodyMeasurementLog.date, order: .reverse) private var measurementLogs: [BodyMeasurementLog]
+
     let profile: UserProfile
 
     @State private var weightKg: Double
     @State private var bodyFatText: String
     @State private var activityLevel: ActivityLevel
+
+    @State private var waistText: String = ""
+    @State private var chestText: String = ""
+    @State private var hipsText: String = ""
+    @State private var armText: String = ""
+    @State private var thighText: String = ""
 
     init(profile: UserProfile) {
         self.profile = profile
@@ -53,6 +61,56 @@ struct AddWeightView: View {
                     }
                     .listRowBackground(Color.wwCardBackground)
 
+                    Section("Lichaamsmaten (optioneel, in cm)") {
+
+                        HStack {
+                            Text("Taille").foregroundStyle(Color.wwDarkAccent)
+                            Spacer()
+                            TextField("cm", text: $waistText)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .foregroundStyle(Color.wwDarkAccent)
+                        }
+
+                        HStack {
+                            Text("Borst").foregroundStyle(Color.wwDarkAccent)
+                            Spacer()
+                            TextField("cm", text: $chestText)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .foregroundStyle(Color.wwDarkAccent)
+                        }
+
+                        HStack {
+                            Text("Heupen").foregroundStyle(Color.wwDarkAccent)
+                            Spacer()
+                            TextField("cm", text: $hipsText)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .foregroundStyle(Color.wwDarkAccent)
+                        }
+
+                        HStack {
+                            Text("Arm").foregroundStyle(Color.wwDarkAccent)
+                            Spacer()
+                            TextField("cm", text: $armText)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .foregroundStyle(Color.wwDarkAccent)
+                        }
+
+                        HStack {
+                            Text("Dijbeen").foregroundStyle(Color.wwDarkAccent)
+                            Spacer()
+                            TextField("cm", text: $thighText)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .foregroundStyle(Color.wwDarkAccent)
+                        }
+
+                    }
+                    .listRowBackground(Color.wwCardBackground)
+
                     Section("Activiteit") {
                         Picker("Activiteit", selection: $activityLevel) {
                             ForEach(ActivityLevel.allCases) { option in
@@ -80,7 +138,19 @@ struct AddWeightView: View {
                     }
                 }
             }
+            .onAppear {
+                prefillFromLastMeasurement()
+            }
         }
+    }
+
+    private func prefillFromLastMeasurement() {
+        guard let last = measurementLogs.first else { return }
+        if waistText.isEmpty, let value = last.waistCm { waistText = String(value) }
+        if chestText.isEmpty, let value = last.chestCm { chestText = String(value) }
+        if hipsText.isEmpty, let value = last.hipsCm { hipsText = String(value) }
+        if armText.isEmpty, let value = last.armCm { armText = String(value) }
+        if thighText.isEmpty, let value = last.thighCm { thighText = String(value) }
     }
 
     private func save() {
@@ -93,6 +163,19 @@ struct AddWeightView: View {
 
         let log = WeightLog(date: Date(), weightKg: weightKg)
         modelContext.insert(log)
+
+        let measurementLog = BodyMeasurementLog(
+            date: Date(),
+            waistCm: Double(waistText.replacingOccurrences(of: ",", with: ".")),
+            chestCm: Double(chestText.replacingOccurrences(of: ",", with: ".")),
+            hipsCm: Double(hipsText.replacingOccurrences(of: ",", with: ".")),
+            armCm: Double(armText.replacingOccurrences(of: ",", with: ".")),
+            thighCm: Double(thighText.replacingOccurrences(of: ",", with: "."))
+        )
+
+        if measurementLog.hasAnyValue {
+            modelContext.insert(measurementLog)
+        }
 
         try? modelContext.save()
 

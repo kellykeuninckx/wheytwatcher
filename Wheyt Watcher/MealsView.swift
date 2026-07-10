@@ -5,8 +5,10 @@ struct MealsView: View {
     
     @Query(sort: \SavedMeal.createdAt, order: .reverse)
     private var savedMeals: [SavedMeal]
-    
-    
+
+    @Environment(\.modelContext) private var modelContext
+    @State private var mealPendingDeletion: SavedMeal?
+
     var body: some View {
         
         NavigationStack {
@@ -64,28 +66,50 @@ struct MealsView: View {
 
                                 }
                                 .buttonStyle(.plain)
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        mealPendingDeletion = meal
+                                    } label: {
+                                        Label("Verwijder", systemImage: "trash")
+                                    }
+                                }
 
                             }
 
                         }
-                    
 
                     }
                         .navigationTitle("Maaltijden")
                     
-                            
-                    
-                    
                 }
                 
-                //
-                //  MealsView.swift
-                //  Wheyt Watcher
-                //
-                //  Created by Kelly Keuninckx on 06/07/2026.
-                //
-                
+            }
+            .alert(
+                "Maaltijd verwijderen?",
+                isPresented: Binding(
+                    get: { mealPendingDeletion != nil },
+                    set: { if !$0 { mealPendingDeletion = nil } }
+                )
+            ) {
+                Button("Annuleer", role: .cancel) {
+                    mealPendingDeletion = nil
+                }
+                Button("Verwijder", role: .destructive) {
+                    if let meal = mealPendingDeletion {
+                        modelContext.delete(meal)
+                        try? modelContext.save()
+                    }
+                    mealPendingDeletion = nil
+                }
+            } message: {
+                Text("Dit verwijdert alleen de opgeslagen maaltijd zelf — je logboek blijft ongewijzigd.")
             }
         }
     }
 }
+//
+//  MealsView.swift
+//  Wheyt Watcher
+//
+//  Created by Kelly Keuninckx on 06/07/2026.
+//

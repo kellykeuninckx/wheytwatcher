@@ -12,6 +12,7 @@ struct ProfileView: View {
     @State private var showingDeleteConfirmation = false
     @State private var showingAddRestDay = false
 
+    @AppStorage("wwBluntCoachMode") private var bluntCoachMode = false
     @AppStorage("wwShowBodyMeasurementsChart") private var showBodyMeasurementsChart = false
     @AppStorage("wwReminderEveningLog") private var reminderEveningLog = true
     @AppStorage("wwReminderWeeklyWeighIn") private var reminderWeeklyWeighIn = true
@@ -81,26 +82,26 @@ struct ProfileView: View {
     // MARK: - Header
 
     private var headerCard: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
 
             ZStack {
                 Circle()
                     .fill(Color.wwPurple.opacity(0.15))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 36, height: 36)
 
                 Text(initials)
-                    .font(.subheadline.bold())
+                    .font(.caption.bold())
                     .foregroundStyle(Color.wwPurple)
             }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
 
                 Text(profile.name)
-                    .font(.title3.bold())
+                    .font(.headline)
                     .foregroundStyle(Color.wwDarkAccent)
 
                 Text("\(profile.age) jaar • \(profile.sex.rawValue)")
-                    .font(.subheadline)
+                    .font(.caption)
                     .foregroundStyle(Color.wwSecondaryText)
 
             }
@@ -120,13 +121,13 @@ struct ProfileView: View {
     // MARK: - Lichaamsgegevens
 
     private var statsCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
 
             Text("Gegevens")
                 .font(.headline)
                 .foregroundStyle(Color.wwDarkAccent)
 
-            Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 14) {
+            Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 8) {
 
                 GridRow {
                     CalorieInfoRow(
@@ -294,6 +295,20 @@ struct ProfileView: View {
             Text("Instellingen")
                 .font(.headline)
                 .foregroundStyle(Color.wwDarkAccent)
+
+            VStack(alignment: .leading, spacing: 4) {
+
+                Toggle("Bot-als-een-baksteen modus", isOn: $bluntCoachMode)
+                    .tint(Color.wwTeal)
+                    .foregroundStyle(Color.wwDarkAccent)
+
+                Text("Liever een sarcastische coach met een knipoog?")
+                    .font(.caption2)
+                    .foregroundStyle(Color.wwTertiaryText)
+
+            }
+
+            Divider()
 
             Toggle("Toon lichaamsmaten in Progressie", isOn: $showBodyMeasurementsChart)
                 .tint(Color.wwTeal)

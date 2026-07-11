@@ -27,11 +27,17 @@ struct TodayView: View {
     @State private var showingAdaptiveCheckInSheet = false
     @State private var adaptiveCheckInResult: AdaptiveCheckInResult?
     @State private var showingMissedDaysPrompt = false
+    @State private var newBadgeBatch: BadgeUnlockBatch?
+
+    @AppStorage("wwLastAcknowledgedKwarkTier") private var lastAcknowledgedKwarkTier = ""
+    @AppStorage("wwLastAcknowledgedStreakTier") private var lastAcknowledgedStreakTier = ""
+    @AppStorage("wwLastAcknowledgedWalkingTier") private var lastAcknowledgedWalkingTier = ""
     @State private var missedDaysRange: [Date] = []
     @State private var showingAddRestDay = false
     @AppStorage("wwLastMissedDaysPromptDate") private var lastMissedDaysPromptDateString: String = ""
 
     @AppStorage("wwIsDarkTheme") private var isDarkTheme: Bool = true
+    @AppStorage("wwBluntCoachMode") private var bluntCoachMode = false
     @AppStorage("wwReminderEveningLog") private var reminderEveningLog = true
     @AppStorage("wwReminderGoalEnding") private var reminderGoalEnding = true
 
@@ -107,25 +113,38 @@ struct TodayView: View {
 
         case .fiberClose:
             guard fiberRemaining > 0, fiberRemaining <= 5 else { return nil }
+            if bluntCoachMode {
+                return "Nog \(fiberRemaining.roundedInt)g vezels te gaan. Werk dat fruit naar binnen, joh."
+            }
             return "Nog \(fiberRemaining.roundedInt) g vezels te gaan. \(fiberEquivalent(fiberRemaining))"
 
         case .proteinClose:
             guard proteinRemaining > 0, proteinRemaining <= 30 else { return nil }
+            if bluntCoachMode {
+                return "Nog \(proteinRemaining.roundedInt)g eiwit te gaan. Pak die kwark er nou maar bij."
+            }
             return "Nog \(proteinRemaining.roundedInt) g eiwit te gaan. \(proteinEquivalent(proteinRemaining))"
 
         case .caloriesAlmostDone:
             guard caloriesRemaining <= 100 else { return nil }
-            return "Je caloriedoel is bijna bereikt. Mooie dag!"
+            return bluntCoachMode
+                ? "Bijna je caloriedoel behaald. Laat die koekjes maar liggen."
+                : "Je caloriedoel is bijna bereikt. Mooie dag!"
 
         case .caloriesPlenty:
             guard caloriesRemaining > 500 else { return nil }
+            if bluntCoachMode {
+                return "Nog \(caloriesRemaining.roundedInt) kcal over. Wil je nou gains of niet? Eten met die hap."
+            }
             return "Je hebt nog \(caloriesRemaining.roundedInt) kcal over. Genoeg ruimte voor een volledige maaltijd."
 
         case .onTrack:
-            return "Je ligt goed op schema. Blijf zo doorgaan!"
+            return bluntCoachMode
+                ? "Je ligt op schema. Hèhè, zal eens tijd worden."
+                : "Je ligt goed op schema. Blijf zo doorgaan!"
 
         case .generalTip:
-            return NutritionTips.tip(for: Date())
+            return bluntCoachMode ? BluntCoachMessages.message(for: Date()) : NutritionTips.tip(for: Date())
 
         }
     }
@@ -276,6 +295,9 @@ struct TodayView: View {
                     }
                 )
             }
+            .sheet(item: $newBadgeBatch) { batch in
+                NewBadgeSheet(badges: batch.badges)
+            }
             .sheet(isPresented: $showingAddRestDay) {
                 AddRestDaySheet()
             }
@@ -289,6 +311,9 @@ struct TodayView: View {
                 }
                 if !showingGoalPeriodEndedSheet && !showingAdaptiveCheckInSheet {
                     checkMissedDaysPrompt()
+                }
+                if !showingGoalPeriodEndedSheet && !showingAdaptiveCheckInSheet && !showingMissedDaysPrompt {
+                    checkNewBadge()
                 }
                 refreshReminders()
             }
@@ -399,6 +424,37 @@ struct TodayView: View {
 
         missedDaysRange = missingDays.sorted()
         showingMissedDaysPrompt = true
+    }
+
+    // MARK: - Nieuwe badge (kwark / streak / wandelen)
+
+    private func checkNewBadge() {
+        let kwarkGrams = BadgeMetrics.totalKwarkGrams(foodEntries: foodEntries)
+        let streak = Double(BadgeMetrics.longestLoggingStreak(foodEntries: foodEntries, dayStatuses: dayStatuses))
+        let walkingHours = BadgeMetrics.totalWalkingHours(trainings: trainings)
+
+        var newlyUnlocked: [BadgeTier] = []
+
+        if let tier = BadgeTiers.current(value: kwarkGrams, tiers: BadgeTiers.kwark),
+           tier.name != lastAcknowledgedKwarkTier {
+            lastAcknowledgedKwarkTier = tier.name
+            newlyUnlocked.append(tier)
+        }
+
+        if let tier = BadgeTiers.current(value: streak, tiers: BadgeTiers.streak),
+           tier.name != lastAcknowledgedStreakTier {
+            lastAcknowledgedStreakTier = tier.name
+            newlyUnlocked.append(tier)
+        }
+
+        if let tier = BadgeTiers.current(value: walkingHours, tiers: BadgeTiers.walking),
+           tier.name != lastAcknowledgedWalkingTier {
+            lastAcknowledgedWalkingTier = tier.name
+            newlyUnlocked.append(tier)
+        }
+
+        guard !newlyUnlocked.isEmpty else { return }
+        newBadgeBatch = BadgeUnlockBatch(badges: newlyUnlocked)
     }
 
     // MARK: - Reminders
@@ -1142,29 +1198,56 @@ enum NutritionTips {
     static let all: [String] = [
         "Wist je dat 1 appel ongeveer 4 g vezels bevat?",
         "Wist je dat 100 g kipfilet ongeveer 31 g eiwit bevat?",
-        "Wist je dat volkoren brood meer vezels bevat dan wit brood?",
+        "Volkoren brood bevat meer vezels dan wit brood.",
         "Wist je dat 1 ei ongeveer 6 g eiwit bevat?",
-        "Wist je dat peulvruchten zoals linzen rijk zijn aan zowel eiwit als vezels?",
-        "Wist je dat magere kwark een van de goedkoopste eiwitbronnen is?",
+        "Peulvruchten zoals linzen zijn rijk aan zowel eiwit als vezels.",
+        "Magere kwark is een van de goedkoopste eiwitbronnen die er zijn.",
         "Wist je dat een banaan ongeveer 3 g vezels bevat?",
-        "Wist je dat voldoende vezels je langer een verzadigd gevoel geven?",
-        "Wist je dat noten een goede bron van gezonde, onverzadigde vetten zijn?",
+        "Voldoende vezels geven je langer een verzadigd gevoel.",
+        "Noten zijn een goede bron van gezonde, onverzadigde vetten.",
         "Wist je dat 100 g Griekse yoghurt ongeveer 10 g eiwit bevat?",
-        "Wist je dat groenten met veel water, zoals komkommer, weinig calorieën kosten maar wel vullen?",
-        "Wist je dat havermout een goede combinatie van vezels én langzame koolhydraten is?",
-        "Wist je dat spieren tijdens rust groeien, niet tijdens de training zelf?",
-        "Wist je dat een dieetpauze na een lange cut je metabolisme kan helpen herstellen?",
-        "Wist je dat je gewicht van dag tot dag kan schommelen door water — de wekelijkse trend zegt veel meer dan één meting?",
-        "Wist je dat progressive overload (geleidelijk zwaarder trainen) de sleutel is tot spiergroei?",
-        "Wist je dat voldoende slaap net zo belangrijk is voor herstel als je voeding?",
-        "Wist je dat consistentie over weken en maanden belangrijker is dan perfectie op één dag?",
-        "Wist je dat krachttraining tijdens een cut helpt om je spiermassa te behouden?",
-        "Wist je dat een te agressief tekort vaker leidt tot terugval dan een gematigd tekort?"
+        "Groenten met veel water, zoals komkommer, bevatten weinig calorieën maar geven wel een verzadigd gevoel.",
+        "Havermout bevat een combinatie van vezels en langzame koolhydraten.",
+        "Spieren groeien tijdens rust, niet tijdens de training zelf.",
+        "Een dieetpauze na een lange cut kan je metabolisme helpen herstellen.",
+        "Je gewicht kan van dag tot dag schommelen doordat je vocht vasthoudt.",
+        "Progressive overload — geleidelijk zwaarder trainen — is de sleutel tot spiergroei.",
+        "Slaap is net zo belangrijk voor een goed herstel als je voeding.",
+        "Consistentie gedurende weken of maanden is belangrijker dan die ene perfecte dag of week.",
+        "Krachttraining tijdens een cut helpt om je spiermassa te behouden. Goed om te weten.",
+        "Een te agressief tekort leidt vaker tot terugval dan een gematigd tekort.",
+        "Wist je dat de tomaat botanisch gezien een fruit is, maar in de keuken als groente wordt behandeld?",
+        "Wist je dat honing praktisch niet kan bederven — archeologen vonden ooit potten honing van duizenden jaren oud die nog eetbaar waren?",
+        "Wist je dat pinda's eigenlijk peulvruchten zijn, geen noten?",
+        "Wist je dat wortels van oorsprong paars waren, niet oranje?",
+        "Wist je dat je smaakpapillen zich ongeveer elke twee weken vernieuwen?",
+        "Wist je dat chocolademelk in de 17e eeuw oorspronkelijk als medicijn werd verkocht?"
     ]
 
     /// Kiest een tip op basis van uur + dag, zodat 'm ook binnen één dag al verschuift i.p.v. steeds
     /// dezelfde tekst te tonen totdat de datum omslaat.
     static func tip(for date: Date) -> String {
+        let hour = Calendar.current.component(.hour, from: date)
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: date) ?? 0
+        return all[(dayOfYear * 24 + hour) % all.count]
+    }
+
+}
+
+// MARK: - Bot-als-een-baksteen modus (algemene, plagerige berichten)
+
+enum BluntCoachMessages {
+
+    static let all: [String] = [
+        "Wil je nou gains of niet? Doe wat je moet doen dan, hop!",
+        "Nog niet gelogd? De kaboutertjes gaan het niet voor je doen.",
+        "Dat vetpercentage gaat niet vanzelf omlaag. Aan de bak, joh.",
+        "Niet lullen, maar loggen!",
+        "Consistentie. Ooit van gehoord? Dacht ik al.",
+        "Alweer vergeten te loggen? Het zal eens niet."
+    ]
+
+    static func message(for date: Date) -> String {
         let hour = Calendar.current.component(.hour, from: date)
         let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: date) ?? 0
         return all[(dayOfYear * 24 + hour) % all.count]
@@ -1228,6 +1311,77 @@ struct MissedDaysPromptSheet: View {
         }
         .padding(30)
         .presentationDetents([.medium])
+    }
+
+}
+
+// MARK: - Nieuwe badge(s) behaald
+
+struct BadgeUnlockBatch: Identifiable {
+    let id = UUID()
+    let badges: [BadgeTier]
+}
+
+struct NewBadgeSheet: View {
+
+    let badges: [BadgeTier]
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 20) {
+
+            Spacer()
+
+            Text(badges.count == 1 ? "Nieuwe badge!" : "Nieuwe badges!")
+                .font(.title3.bold())
+                .foregroundStyle(Color.wwDarkAccent)
+
+            ScrollView {
+                VStack(spacing: 20) {
+                    ForEach(badges) { badge in
+                        VStack(spacing: 10) {
+
+                            ZStack {
+                                Circle()
+                                    .fill(Color.wwAqua.opacity(0.15))
+                                    .frame(width: 72, height: 72)
+                                Circle()
+                                    .stroke(Color.wwAqua, lineWidth: 3)
+                                    .frame(width: 72, height: 72)
+                                Text("🏅")
+                                    .font(.system(size: 28))
+                            }
+
+                            Text(badge.name)
+                                .font(.headline)
+                                .foregroundStyle(Color.wwAqua)
+
+                            Text(badge.message)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.wwSecondaryText)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 12)
+
+                        }
+                    }
+                }
+            }
+
+            Spacer()
+
+            Button {
+                dismiss()
+            } label: {
+                Text("Mooi zo!")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.wwTeal)
+
+        }
+        .padding(30)
+        .presentationDetents([.medium, .large])
     }
 
 }

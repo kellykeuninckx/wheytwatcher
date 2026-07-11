@@ -184,6 +184,8 @@ struct ProgressViewScreen: View {
                         if showBodyMeasurementsChart && !filteredMeasurementLogs.isEmpty {
                             bodyMeasurementsCard
                         }
+
+                        badgesCard
                     }
                     .padding(.horizontal, 12)
                     .padding(.bottom, 24)
@@ -312,15 +314,34 @@ struct ProgressViewScreen: View {
 
         case .traject:
             guard let period = profile.activeGoalPeriod else { return nil }
-            return ("🎯", "Week \(period.currentWeekNumber) van \(period.durationWeeks), je ligt op schema.")
+            let weekText = "Week \(period.currentWeekNumber) van \(period.durationWeeks)"
+            let variants = [
+                "\(weekText), nog even volhouden. Je kan het!",
+                "\(weekText), je ligt op schema. Lekker bezig.",
+                "\(weekText) alweer. Je gaat als een speer.",
+                "\(weekText). Weer een stapje dichterbij je doel."
+            ]
+            return ("🎯", pickVariant(variants))
 
         case .streak:
             guard loggingStreak > 0 else { return nil }
-            return ("🔥", "Je hebt al \(loggingStreak) \(loggingStreak == 1 ? "dag" : "dagen") op rij gelogd.")
+            let dayWord = loggingStreak == 1 ? "dag" : "dagen"
+            let variants = [
+                "Je hebt al \(loggingStreak) \(dayWord) op rij gelogd.",
+                "\(loggingStreak) \(dayWord) op rij gelogd. Consistentie is de sleutel tot succes!",
+                "Je hebt al \(loggingStreak) \(dayWord) op rij gelogd. Houd dit vol!"
+            ]
+            return ("🔥", pickVariant(variants))
 
         case .voeding:
             guard let adherence = proteinAdherenceThisWeek, adherence.total > 0 else { return nil }
-            return ("🥩", "Je haalde deze week \(adherence.met) van de \(adherence.total) dagen je eiwitdoel.")
+            let variants = [
+                "Je haalde deze week \(adherence.met) van de \(adherence.total) dagen je eiwitdoel.",
+                "Lekker hoor, \(adherence.met) van de \(adherence.total) dagen je eiwitdoel gehaald deze week.",
+                "\(adherence.met) van de \(adherence.total) dagen je eiwitdoel gehaald. Kom maar op met die spieren.",
+                "Deze week al \(adherence.met) van de \(adherence.total) dagen je eiwit binnen. Sterk bezig."
+            ]
+            return ("🥩", pickVariant(variants))
 
         case .gewicht:
             if let sudden = suddenWeightChange {
@@ -329,18 +350,34 @@ struct ProgressViewScreen: View {
             }
 
             guard let rate = weeklyWeightChangeRate, abs(rate) >= 0.05 else { return nil }
-            let verb = rate < 0 ? "verliest" : "wint"
-            return ("⚖️", "Je \(verb) gemiddeld \(formattedOneDecimal(rate)) kg per week.")
+            let directionVariants = rate < 0
+                ? ["Je valt gemiddeld \(formattedOneDecimal(rate)) kg af per week."]
+                : ["Je komt gemiddeld \(formattedOneDecimal(rate)) kg aan per week."]
+            let variants = directionVariants + ["Weer een dag dichterbij je doelgewicht!"]
+            return ("⚖️", pickVariant(variants))
 
         case .training:
             guard trainingsThisWeekCount > 0 else { return nil }
-            return ("🏋️", "Je trainde deze week \(trainingsThisWeekCount) keer.")
+            let variants = [
+                "Je trainde deze week \(trainingsThisWeekCount) keer.",
+                "Je trainde deze week \(trainingsThisWeekCount) keer. Lekker!",
+                "Je bent heerlijk consistent in je trainen — deze week alweer \(trainingsThisWeekCount) keer.",
+                "\(trainingsThisWeekCount) trainingen deze week. Je hebt een mooi ritme te pakken."
+            ]
+            return ("🏋️", pickVariant(variants))
 
         case .wandelen:
             guard walkingHoursThisWeek > 0 else { return nil }
             return ("🚶", "Je hebt deze week \(formattedOneDecimal(walkingHoursThisWeek)) uur gewandeld. \(walkingDistanceEquivalent(hours: walkingHoursThisWeek))")
 
         }
+    }
+
+    /// Kiest een variant op basis van de dag, zodat berichten binnen dezelfde categorie
+    /// toch afwisselen i.p.v. altijd exact dezelfde formulering te tonen.
+    private func pickVariant(_ variants: [String], for date: Date = Date()) -> String {
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: date) ?? 0
+        return variants[dayOfYear % variants.count]
     }
 
     private var progressCoachCard: some View {
@@ -447,10 +484,10 @@ struct ProgressViewScreen: View {
 
         let milestones: [(maxKm: Double, text: String)] = [
             (5, "Dat is ongeveer een rondje door de buurt."),
-            (15, "Dat is ongeveer de afstand tussen Utrecht en Amersfoort."),
-            (30, "Dat is ongeveer Den Haag naar Rotterdam."),
+            (15, "Dat is ongeveer van Utrecht naar Amersfoort."),
+            (30, "Dat is ongeveer van Den Haag naar Rotterdam."),
             (50, "Dat is ongeveer van Scheveningen naar Noordwijk én terug."),
-            (80, "Dat is verder dan Amsterdam naar Utrecht én terug.")
+            (80, "Dat is verder dan van Amsterdam naar Utrecht én terug.")
         ]
 
         for milestone in milestones where km <= milestone.maxKm {
@@ -835,6 +872,106 @@ struct ProgressViewScreen: View {
                 selectedMeasurementType = first
             }
         }
+    }
+
+    // MARK: - Prestaties (kwark-teller, streak & wandel-badges)
+
+    private var totalKwarkGrams: Double {
+        BadgeMetrics.totalKwarkGrams(foodEntries: foodEntries)
+    }
+
+    private var longestLoggingStreak: Int {
+        BadgeMetrics.longestLoggingStreak(foodEntries: foodEntries, dayStatuses: dayStatuses)
+    }
+
+    private var totalWalkingHours: Double {
+        BadgeMetrics.totalWalkingHours(trainings: trainings)
+    }
+
+    private func badgeRow(
+        icon: String,
+        value: Double,
+        tiers: [BadgeTier],
+        unit: String,
+        startMessage: String
+    ) -> some View {
+        let current = BadgeTiers.current(value: value, tiers: tiers)
+        let next = BadgeTiers.next(value: value, tiers: tiers)
+        let isUnlocked = current != nil
+
+        return HStack(alignment: .top, spacing: 12) {
+
+            ZStack {
+                Circle()
+                    .fill(isUnlocked ? Color.wwAqua.opacity(0.15) : Color.wwDarkAccent.opacity(0.06))
+                Circle()
+                    .stroke(isUnlocked ? Color.wwAqua : Color.wwDarkAccent.opacity(0.15), lineWidth: 2)
+                Text(icon)
+                    .font(.subheadline)
+                    .opacity(isUnlocked ? 1 : 0.4)
+            }
+            .frame(width: 40, height: 40)
+
+            VStack(alignment: .leading, spacing: 3) {
+
+                Text(current?.name ?? "Nog geen badge")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(isUnlocked ? Color.wwDarkAccent : Color.wwSecondaryText)
+
+                Text(current?.message ?? startMessage)
+                    .font(.caption)
+                    .foregroundStyle(Color.wwSecondaryText)
+
+                if let next {
+                    Text("Nog \((next.threshold - value).roundedInt) \(unit) tot '\(next.name)'")
+                        .font(.caption2)
+                        .foregroundStyle(Color.wwTertiaryText)
+                }
+
+            }
+
+            Spacer()
+
+        }
+    }
+
+    private var badgesCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+
+            Text("Prestaties")
+                .font(.headline)
+                .foregroundStyle(Color.wwDarkAccent)
+
+            badgeRow(
+                icon: "🥄",
+                value: totalKwarkGrams,
+                tiers: BadgeTiers.kwark,
+                unit: "g kwark",
+                startMessage: "Log wat kwark om je eerste badge te halen."
+            )
+
+            Divider()
+
+            badgeRow(
+                icon: "🔥",
+                value: Double(longestLoggingStreak),
+                tiers: BadgeTiers.streak,
+                unit: "dagen",
+                startMessage: "Log een aantal dagen op rij om je eerste badge te halen."
+            )
+
+            Divider()
+
+            badgeRow(
+                icon: "🚶",
+                value: totalWalkingHours,
+                tiers: BadgeTiers.walking,
+                unit: "uur",
+                startMessage: "Log wat wandelingen om je eerste badge te halen."
+            )
+
+        }
+        .wwCard()
     }
 
 }

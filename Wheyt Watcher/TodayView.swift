@@ -144,7 +144,9 @@ struct TodayView: View {
                 : "Je ligt goed op schema. Blijf zo doorgaan!"
 
         case .generalTip:
-            return bluntCoachMode ? BluntCoachMessages.message(for: Date()) : NutritionTips.tip(for: Date())
+            return bluntCoachMode
+                ? BluntCoachMessages.message(for: Date(), hasLoggedToday: !todaysFood.isEmpty)
+                : NutritionTips.tip(for: Date())
 
         }
     }
@@ -1238,19 +1240,25 @@ enum NutritionTips {
 
 enum BluntCoachMessages {
 
-    static let all: [String] = [
-        "Wil je nou gains of niet? Doe wat je moet doen dan, hop!",
+    /// Alleen tonen als er nog niet gelogd is vandaag — anders klopt de tekst gewoon niet.
+    static let loggingReminders: [String] = [
         "Nog niet gelogd? De kaboutertjes gaan het niet voor je doen.",
-        "Dat vetpercentage gaat niet vanzelf omlaag. Aan de bak, joh.",
-        "Niet lullen, maar loggen!",
-        "Consistentie. Ooit van gehoord? Dacht ik al.",
-        "Alweer vergeten te loggen? Het zal eens niet."
+        "Alweer vergeten te loggen? Het zal eens niet.",
+        "Niet lullen, maar loggen!"
     ]
 
-    static func message(for date: Date) -> String {
+    /// Altijd geldig, ongeacht of je vandaag al hebt gelogd.
+    static let general: [String] = [
+        "Wil je nou gains of niet? Doe wat je moet doen dan, hop!",
+        "Dat vetpercentage gaat niet vanzelf omlaag. Aan de bak, joh.",
+        "Consistentie. Ooit van gehoord? Dacht ik al."
+    ]
+
+    static func message(for date: Date, hasLoggedToday: Bool) -> String {
+        let pool = hasLoggedToday ? general : (loggingReminders + general)
         let hour = Calendar.current.component(.hour, from: date)
         let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: date) ?? 0
-        return all[(dayOfYear * 24 + hour) % all.count]
+        return pool[(dayOfYear * 24 + hour) % pool.count]
     }
 
 }

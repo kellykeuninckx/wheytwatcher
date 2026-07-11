@@ -421,17 +421,44 @@ struct TodayView: View {
     // MARK: - Doel-voortgang (read-only, wisselen doe je via Profiel)
 
     private var goalProgressLabel: some View {
-        Group {
+        HStack(spacing: 8) {
+
+            Text(goalProgressText)
+                .font(.caption2.weight(.medium))
+                .kerning(1)
+                .foregroundStyle(Color.wwOrange)
+                .fixedSize(horizontal: false, vertical: true)
+
             if let period = profile.activeGoalPeriod {
-                Text("\(profile.goalMode.rawValue) — week \(period.currentWeekNumber) van \(period.durationWeeks), nog \(period.weeksRemaining) \(period.weeksRemaining == 1 ? "week" : "weken") te gaan")
-            } else {
-                Text(profile.goalMode.rawValue)
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.wwOrange.opacity(0.2))
+
+                        Capsule()
+                            .fill(Color.wwOrange)
+                            .frame(width: geo.size.width * progressFraction(for: period))
+                    }
+                }
+                .frame(height: 3)
+                .frame(maxWidth: 60)
             }
+
         }
-        .font(.caption.bold())
-        .foregroundStyle(Color.wwOrange)
-        .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var goalProgressText: String {
+        guard let period = profile.activeGoalPeriod else {
+            return profile.goalMode.rawValue.uppercased()
+        }
+        let weeksWord = period.weeksRemaining == 1 ? "WEEK" : "WEKEN"
+        return "\(profile.goalMode.rawValue.uppercased()) · NOG \(period.weeksRemaining) \(weeksWord)"
+    }
+
+    private func progressFraction(for period: GoalPeriod) -> Double {
+        guard period.durationWeeks > 0 else { return 0 }
+        return min(max(Double(period.currentWeekNumber) / Double(period.durationWeeks), 0), 1)
     }
 
     // MARK: - Header

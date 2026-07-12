@@ -40,8 +40,8 @@ enum ReminderManager {
         }
 
         let content = UNMutableNotificationContent()
-        content.title = "Nog niet gelogd vandaag"
-        content.body = "Een paar minuutjes is genoeg om je dag compleet te maken."
+        content.title = "Vandaag nog niet gelogd."
+        content.body = "Vergeet niet je dag in te voeren of een rustdag in te stellen."
         content.sound = .default
 
         let trigger = UNCalendarNotificationTrigger(
@@ -63,18 +63,51 @@ enum ReminderManager {
 
     // MARK: - 2. Wekelijkse gewicht-herinnering
 
+    private static let weighInVariantIndexKey = "wwWeighInVariantIndex"
+
+    private static let weighInVariants: [String] = [
+        "Een wekelijkse meting geeft het beste beeld van je trend.",
+        "Elke week hetzelfde moment kiezen maakt het makkelijker om het vol te houden.",
+        "Je gewicht schommelt dagelijks — de wekelijkse trend vertelt het echte verhaal."
+    ]
+
     /// `weekday` volgt Calendar's conventie: 1 = zondag, 2 = maandag, ... 7 = zaterdag.
+    /// Wordt aangeroepen bij het aan-/uitzetten van de instelling of het wijzigen van de wegdag —
+    /// plant meteen een verse melding met de eerstvolgende tekst-variant.
     static func setWeeklyWeighInReminderEnabled(_ enabled: Bool, weekday: Int) {
-        let center = UNUserNotificationCenter.current()
-        center.removePendingNotificationRequests(withIdentifiers: [weeklyWeighInIdentifier])
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [weeklyWeighInIdentifier])
 
         guard enabled else { return }
 
         requestAuthorizationIfNeeded()
+        scheduleNextWeighInReminder(weekday: weekday)
+    }
+
+    /// Wordt aangeroepen zodra de app opent. Een gewone herhalende melding toont altijd exact
+    /// dezelfde tekst — door in plaats daarvan telkens een eenmalige melding te plannen (en die
+    /// hier te verversen zodra de vorige al is afgevuurd/verlopen), kan de tekst wél rouleren.
+    static func refreshWeeklyWeighInReminderIfNeeded(enabled: Bool, weekday: Int) {
+        guard enabled else {
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [weeklyWeighInIdentifier])
+            return
+        }
+
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            let alreadyScheduled = requests.contains { $0.identifier == weeklyWeighInIdentifier }
+            if !alreadyScheduled {
+                scheduleNextWeighInReminder(weekday: weekday)
+            }
+        }
+    }
+
+    private static func scheduleNextWeighInReminder(weekday: Int) {
+        let defaults = UserDefaults.standard
+        let variantIndex = defaults.integer(forKey: weighInVariantIndexKey) % weighInVariants.count
+        defaults.set((variantIndex + 1) % weighInVariants.count, forKey: weighInVariantIndexKey)
 
         let content = UNMutableNotificationContent()
-        content.title = "Tijd om te wegen"
-        content.body = "Een wekelijkse meting geeft het beste beeld van je trend."
+        content.title = "Tijd om te wegen."
+        content.body = weighInVariants[variantIndex]
         content.sound = .default
 
         var dateComponents = DateComponents()
@@ -82,9 +115,11 @@ enum ReminderManager {
         dateComponents.hour = 9
         dateComponents.minute = 0
 
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        // repeats: false — expres eenmalig, zodat we 'm elke keer met een nieuwe tekst kunnen
+        // vervangen in plaats van vast te zitten aan één herhalende tekst.
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: false)
         let request = UNNotificationRequest(identifier: weeklyWeighInIdentifier, content: content, trigger: trigger)
-        center.add(request)
+        UNUserNotificationCenter.current().add(request)
     }
 
     // MARK: - 3. Doelperiode loopt bijna af
@@ -104,8 +139,8 @@ enum ReminderManager {
         }
 
         let content = UNMutableNotificationContent()
-        content.title = "Je doelperiode loopt bijna af"
-        content.body = "Nog 3 dagen te gaan. Tijd om na te denken over je volgende stap."
+        content.title = "Je doelperiode loopt bijna af."
+        content.body = "Nog 3 dagen te gaan. Nog even volhouden!"
         content.sound = .default
 
         var dateComponents = Calendar.current.dateComponents([.year, .month, .day], from: reminderDate)
@@ -117,10 +152,4 @@ enum ReminderManager {
         center.add(request)
     }
 
-}//
-//  ReminderManager.swift
-//  Wheyt Watcher
-//
-//  Created by Kelly Keuninckx on 09/07/2026.
-//
-
+}

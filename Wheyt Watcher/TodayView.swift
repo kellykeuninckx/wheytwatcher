@@ -40,6 +40,8 @@ struct TodayView: View {
     @AppStorage("wwBluntCoachMode") private var bluntCoachMode = false
     @AppStorage("wwReminderEveningLog") private var reminderEveningLog = true
     @AppStorage("wwReminderGoalEnding") private var reminderGoalEnding = true
+    @AppStorage("wwReminderWeeklyWeighIn") private var reminderWeeklyWeighIn = true
+    @AppStorage("wwWeighInWeekday") private var weighInWeekday = 2
 
 
     private var todaysFood: [FoodLogEntry] {
@@ -473,6 +475,11 @@ struct TodayView: View {
         ReminderManager.setGoalEndingReminderEnabled(
             reminderGoalEnding,
             period: profile.activeGoalPeriod
+        )
+
+        ReminderManager.refreshWeeklyWeighInReminderIfNeeded(
+            enabled: reminderWeeklyWeighIn,
+            weekday: weighInWeekday
         )
     }
 

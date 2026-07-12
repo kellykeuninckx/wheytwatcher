@@ -126,7 +126,7 @@ struct TodayView: View {
             return "Nog \(proteinRemaining.roundedInt) g eiwit te gaan. \(proteinEquivalent(proteinRemaining))"
 
         case .caloriesAlmostDone:
-            guard caloriesRemaining <= 100 else { return nil }
+            guard caloriesRemaining > 0, caloriesRemaining <= 100 else { return nil }
             return bluntCoachMode
                 ? "Bijna je caloriedoel behaald. Laat die koekjes maar liggen."
                 : "Je caloriedoel is bijna bereikt. Mooie dag!"
@@ -1381,7 +1381,7 @@ struct NewBadgeSheet: View {
             Button {
                 dismiss()
             } label: {
-                Text("Mooi zo!")
+                Text("Top!")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)

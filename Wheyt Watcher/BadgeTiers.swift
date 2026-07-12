@@ -15,30 +15,32 @@ struct BadgeTier: Identifiable, Equatable {
 enum BadgeTiers {
 
     static let kwark: [BadgeTier] = [
-        BadgeTier(threshold: 1000, name: "Eerste Hap", message: "Je eerste kilo kwark zit erop. De reis begint."),
-        BadgeTier(threshold: 2500, name: "Kwark Liefhebber", message: "2,5 kg kwark — ongeveer een grote zak bloem."),
-        BadgeTier(threshold: 5000, name: "Kwark Beginner", message: "5 kg kwark — ongeveer het gewicht van een kleine wasbeer."),
-        BadgeTier(threshold: 10000, name: "Kwark Doorzetter", message: "10 kg kwark — ongeveer het gewicht van een peuter."),
-        BadgeTier(threshold: 15000, name: "Kwark Kenner", message: "15 kg kwark — je zou er een flinke boodschappentas mee vullen."),
-        BadgeTier(threshold: 30000, name: "Kwark Fanaat", message: "30 kg kwark — ongeveer het gewicht van een grote hond."),
-        BadgeTier(threshold: 60000, name: "Kwark Kampioen", message: "60 kg kwark — zo ongeveer het gewicht van een dwerggeit."),
-        BadgeTier(threshold: 100000, name: "Kwark Koning", message: "100 kg kwark. Dat is ongeveer je eigen lichaamsgewicht aan kwark, opgegeten.")
+        BadgeTier(threshold: 1000, name: "Eerste hap", message: "Dat was je eerste kilo. Je kwarkreis begint nu."),
+        BadgeTier(threshold: 2500, name: "Kwark liefhebber", message: "2,5kg kwark is ongeveer 4 basketballen. Probeer die eens tegelijk in je handen te houden ;-)"),
+        BadgeTier(threshold: 5000, name: "Kwark beginneling", message: "5kg kwark – dat zijn zo'n 25 vinyl platen van je favoriete artiest."),
+        BadgeTier(threshold: 10000, name: "Kwark doorzetter", message: "10kg kwark – inmiddels heb je een kleine peuter op. Nou ja, 't gewicht ervan dan."),
+        BadgeTier(threshold: 15000, name: "Kwark kenner", message: "15kg kwark... Til eens een kettlebel van dat gewicht op, dan weet je pas hoeveel het is."),
+        BadgeTier(threshold: 30000, name: "Kwark fanaat", message: "30kg kwark is het gewicht van meer dan 11.000 pingpongballetjes. Ga zo door."),
+        BadgeTier(threshold: 60000, name: "Kwark kampioen", message: "60kg kwark. Dat zijn meer dan 19.000 theezakjes. Dat is één kopje per dag, 52 jaar lang!"),
+        BadgeTier(threshold: 100000, name: "Kwark koning", message: "100kg kwark. Je bent de onbetwiste kwark koning. Gefeliciteerd!")
     ]
 
     static let streak: [BadgeTier] = [
-        BadgeTier(threshold: 7, name: "Week Vol", message: "7 dagen op rij gelogd. Mooie gewoonte in wording."),
-        BadgeTier(threshold: 14, name: "Twee Weken Sterk", message: "14 dagen op rij gelogd. Je bent duidelijk niet toevallig begonnen."),
-        BadgeTier(threshold: 30, name: "Maand Meester", message: "30 dagen op rij — dat is geen toeval meer, dat is discipline."),
-        BadgeTier(threshold: 50, name: "Halve Eeuw", message: "50 dagen op rij — halverwege naar de honderd."),
-        BadgeTier(threshold: 75, name: "Bijna Legendarisch", message: "75 dagen op rij. Nog een kwart te gaan tot de honderd."),
-        BadgeTier(threshold: 100, name: "Eeuwenaar", message: "100 dagen op rij gelogd. Dat is bijna een kwart jaar consistentie.")
+        BadgeTier(threshold: 7, name: "7 dagen streak", message: "7 dagen op rij gelogd. Dat is een mooie gewoonte in wording."),
+        BadgeTier(threshold: 14, name: "14 dagen streak", message: "14 dagen al! Dat is duidelijk geen toeval meer."),
+        BadgeTier(threshold: 30, name: "30 dagen streak", message: "30 dagen… Een hele maand gelogd. Dat noem je nou discipline."),
+        BadgeTier(threshold: 50, name: "50 dagen streak", message: "50 dagen op rij – dat is halverwege de 100. Zet 'm op!"),
+        BadgeTier(threshold: 75, name: "75 dagen streak", message: "75 dagen. Bijna bijna de 100, nu niet stoppen!"),
+        BadgeTier(threshold: 100, name: "100 dagen streak", message: "100 dagen op rij gelogd. Dat mag gevierd worden!")
     ]
 
     static let walking: [BadgeTier] = [
-        BadgeTier(threshold: 10, name: "Wandelaar", message: "10 uur gewandeld — een mooi begin."),
-        BadgeTier(threshold: 25, name: "Flinke Wandelaar", message: "25 uur gewandeld, ongeveer Den Haag naar Rotterdam, een paar keer over."),
-        BadgeTier(threshold: 50, name: "Wandelheld", message: "50 uur gewandeld — dat is Scheveningen naar Noordwijk én terug, meerdere keren."),
-        BadgeTier(threshold: 100, name: "Wandellegende", message: "100 uur gewandeld. Serieus indrukwekkend.")
+        BadgeTier(threshold: 10, name: "Wandelaar", message: "10 uur gewandeld. Dat is een mooi begin."),
+        BadgeTier(threshold: 15, name: "Vlotte wandelaar", message: "15 uur gewandeld. Dat is ongeveer van Amsterdam naar Rotterdam."),
+        BadgeTier(threshold: 30, name: "Wandelheld", message: "30 uur gewandeld. Dat is ongeveer van Amsterdam naar Antwerpen."),
+        BadgeTier(threshold: 50, name: "Wandelfanaat", message: "50 uur gewandeld. Dat is ongeveer als van Groningen naar Maastricht lopen — bijna het hele land door."),
+        BadgeTier(threshold: 75, name: "Wandellegende", message: "75 uur gewandeld. Dat is ongeveer als van Amsterdam naar Parijs lopen."),
+        BadgeTier(threshold: 100, name: "Wandelkoning", message: "100 uur gewandeld. Wauw, dat is serieus indrukwekkend.")
     ]
 
     static func current(value: Double, tiers: [BadgeTier]) -> BadgeTier? {

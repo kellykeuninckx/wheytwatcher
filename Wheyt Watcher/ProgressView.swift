@@ -334,7 +334,7 @@ struct ProgressViewScreen: View {
             return ("🔥", pickVariant(variants))
 
         case .voeding:
-            guard let adherence = proteinAdherenceThisWeek, adherence.total > 0 else { return nil }
+            guard let adherence = proteinAdherenceThisWeek, adherence.met > 0 else { return nil }
             let variants = [
                 "Je haalde deze week \(adherence.met) van de \(adherence.total) dagen je eiwitdoel.",
                 "Lekker hoor, \(adherence.met) van de \(adherence.total) dagen je eiwitdoel gehaald deze week.",

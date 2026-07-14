@@ -15,6 +15,7 @@ struct TodayView: View {
     @State private var showingAddTraining = false
     @State private var showingAddWeight = false
     @State private var selectedDate: Date = Date()
+    @State private var macroBreakdownSelection: MacroBreakdownType?
     @State private var showingCopyMeal = false
     @State private var showingFavorites = false
     @State private var showingMeals = false
@@ -301,6 +302,9 @@ struct TodayView: View {
             }
             .sheet(item: $newBadgeBatch) { batch in
                 NewBadgeSheet(badges: batch.badges)
+            }
+            .sheet(item: $macroBreakdownSelection) { macro in
+                MacroBreakdownView(initialMacro: macro, date: selectedDate, entries: todaysFood)
             }
             .sheet(isPresented: $showingAddRestDay) {
                 AddRestDaySheet()
@@ -819,6 +823,8 @@ struct TodayView: View {
                     gradient: .wwProtein,
                     lineWidth: 7
                 )
+                .contentShape(Rectangle())
+                .onTapGesture { macroBreakdownSelection = .eiwit }
                 
                 Spacer()
                 
@@ -830,6 +836,8 @@ struct TodayView: View {
                     gradient: .wwCarbs,
                     lineWidth: 7
                 )
+                .contentShape(Rectangle())
+                .onTapGesture { macroBreakdownSelection = .carbs }
                 
                 Spacer()
                 
@@ -841,6 +849,8 @@ struct TodayView: View {
                     gradient: .wwFat,
                     lineWidth: 7
                 )
+                .contentShape(Rectangle())
+                .onTapGesture { macroBreakdownSelection = .vet }
                 
                 Spacer()
                 
@@ -852,6 +862,8 @@ struct TodayView: View {
                     gradient: .wwFiber,
                     lineWidth: 7
                 )
+                .contentShape(Rectangle())
+                .onTapGesture { macroBreakdownSelection = .vezels }
                 
                 Spacer()
             }
@@ -1397,6 +1409,126 @@ struct NewBadgeSheet: View {
         }
         .padding(30)
         .presentationDetents([.medium, .large])
+    }
+
+}
+
+// MARK: - Macro-uitklap (welke producten leverden hoeveel van een macro)
+
+enum MacroBreakdownType: String, Identifiable, CaseIterable {
+    case eiwit = "Eiwit"
+    case carbs = "Carbs"
+    case vet = "Vet"
+    case vezels = "Vezels"
+
+    var id: String { rawValue }
+
+    var color: Color {
+        switch self {
+        case .eiwit: return .wwBlue
+        case .carbs: return .wwTeal
+        case .vet: return .wwOrange
+        case .vezels: return .wwMint
+        }
+    }
+
+    func grams(from entry: FoodLogEntry) -> Double {
+        switch self {
+        case .eiwit: return entry.proteinGrams
+        case .carbs: return entry.carbsGrams
+        case .vet: return entry.fatGrams
+        case .vezels: return entry.fiberGrams
+        }
+    }
+}
+
+struct MacroBreakdownView: View {
+
+    @State var initialMacro: MacroBreakdownType
+    let date: Date
+    let entries: [FoodLogEntry]
+
+    @Environment(\.dismiss) private var dismiss
+
+    private var contributions: [(name: String, grams: Double, count: Int)] {
+        let grouped = Dictionary(grouping: entries, by: { $0.name })
+
+        return grouped
+            .map { name, items in
+                (name: name, grams: items.reduce(0) { $0 + initialMacro.grams(from: $1) }, count: items.count)
+            }
+            .filter { $0.grams > 0 }
+            .sorted { $0.grams > $1.grams }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+
+                DumbbellPatternBackground()
+
+                VStack(spacing: 16) {
+
+                    Picker("Macro", selection: $initialMacro) {
+                        ForEach(MacroBreakdownType.allCases) { macro in
+                            Text(macro.rawValue).tag(macro)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                    .padding(.top, 12)
+
+                    if contributions.isEmpty {
+
+                        WWPlaceholderCard(
+                            icon: "chart.pie",
+                            color: initialMacro.color,
+                            title: "Nog niks gelogd",
+                            message: "Zodra je iets logt met \(initialMacro.rawValue.lowercased()) erin, zie je hier welke producten het meest bijdroegen."
+                        )
+                        .padding(.horizontal)
+
+                        Spacer()
+
+                    } else {
+
+                        List {
+                            ForEach(contributions, id: \.name) { item in
+                                HStack {
+
+                                    Text(item.count > 1 ? "\(item.name) (\(item.count)x)" : item.name)
+                                        .font(.subheadline)
+                                        .foregroundStyle(Color.wwDarkAccent)
+
+                                    Spacer()
+
+                                    Text("\(item.grams.roundedInt) g")
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(initialMacro.color)
+
+                                }
+                                .listRowBackground(Color.wwCardBackground)
+                            }
+                        }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+
+                    }
+
+                }
+
+            }
+            .tint(Color.wwTeal)
+            .navigationTitle("\(initialMacro.rawValue) — \(date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: Locale(identifier: "nl_NL"))))")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Sluiten") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 
 }

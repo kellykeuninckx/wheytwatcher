@@ -359,16 +359,16 @@ struct ProgressViewScreen: View {
         case .training:
             guard trainingsThisWeekCount > 0 else { return nil }
             let variants = [
-                "Je trainde deze week \(trainingsThisWeekCount) keer.",
-                "Je trainde deze week \(trainingsThisWeekCount) keer. Lekker!",
-                "Je bent heerlijk consistent in je trainen — deze week alweer \(trainingsThisWeekCount) keer.",
-                "\(trainingsThisWeekCount) trainingen deze week. Je hebt een mooi ritme te pakken."
+                "Je trainde de afgelopen week \(trainingsThisWeekCount) \(trainingsThisWeekCount == 1 ? "dag" : "dagen").",
+                "Je trainde \(trainingsThisWeekCount) \(trainingsThisWeekCount == 1 ? "dag" : "dagen") de afgelopen week.",
+                "Je trainde de afgelopen week \(trainingsThisWeekCount) \(trainingsThisWeekCount == 1 ? "dag" : "dagen"). Lekker bezig!",
+                "\(trainingsThisWeekCount) \(trainingsThisWeekCount == 1 ? "dag" : "dagen") getraind de afgelopen week. Mooi ritme te pakken."
             ]
             return ("🏋️", pickVariant(variants))
 
         case .wandelen:
             guard walkingHoursThisWeek > 0 else { return nil }
-            return ("🚶", "Je hebt deze week \(formattedOneDecimal(walkingHoursThisWeek)) uur gewandeld. \(walkingDistanceEquivalent(hours: walkingHoursThisWeek))")
+            return ("🚶", "Je hebt de afgelopen week \(formattedOneDecimal(walkingHoursThisWeek)) uur gewandeld. \(walkingDistanceEquivalent(hours: walkingHoursThisWeek))")
 
         }
     }
@@ -468,7 +468,13 @@ struct ProgressViewScreen: View {
     }
 
     private var trainingsThisWeekCount: Int {
-        trainings.filter { $0.date >= currentWeekStart && $0.type != .walking }.count
+        let calendar = Calendar.current
+        let trainingDays = Set(
+            trainings
+                .filter { $0.date >= currentWeekStart && $0.type != .walking }
+                .map { calendar.startOfDay(for: $0.date) }
+        )
+        return trainingDays.count
     }
 
     private var walkingHoursThisWeek: Double {

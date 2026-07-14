@@ -7,10 +7,12 @@ struct ProfileView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var purchaseManager: PurchaseManager
 
     @State private var showingEditGoal = false
     @State private var showingDeleteConfirmation = false
     @State private var showingAddRestDay = false
+    @State private var showingPaywall = false
 
     @AppStorage("wwBluntCoachMode") private var bluntCoachMode = false
     @AppStorage("wwShowBodyMeasurementsChart") private var showBodyMeasurementsChart = false
@@ -51,6 +53,8 @@ struct ProfileView: View {
 
                         settingsSection
 
+                        premiumCard
+
                         deleteDataSection
 
                     }
@@ -65,6 +69,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showingAddRestDay) {
                 AddRestDaySheet()
+            }
+            .sheet(isPresented: $showingPaywall) {
+                PaywallView()
             }
             .alert("Gegevens verwijderen", isPresented: $showingDeleteConfirmation) {
                 Button("Nee", role: .cancel) {}
@@ -375,6 +382,42 @@ struct ProfileView: View {
             Text("Ben je ziek, met vakantie of toe aan een rustdag? Vink deze optie dan aan.")
                 .font(.caption2)
                 .foregroundStyle(Color.wwTertiaryText)
+
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .wwCard()
+    }
+
+    // MARK: - Premium
+
+    private var premiumCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+
+            if purchaseManager.isPremiumUnlocked {
+
+                Label("Premium ontgrendeld", systemImage: "star.fill")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Color.wwOrange)
+
+                Text("Bedankt voor je steun — alle premium-functies staan open.")
+                    .font(.caption2)
+                    .foregroundStyle(Color.wwTertiaryText)
+
+            } else {
+
+                Button {
+                    showingPaywall = true
+                } label: {
+                    Label("Ontgrendel Premium", systemImage: "star.fill")
+                        .font(.subheadline.bold())
+                }
+                .tint(Color.wwOrange)
+
+                Text("Eenmalige aankoop — geen abonnement.")
+                    .font(.caption2)
+                    .foregroundStyle(Color.wwTertiaryText)
+
+            }
 
         }
         .frame(maxWidth: .infinity, alignment: .leading)

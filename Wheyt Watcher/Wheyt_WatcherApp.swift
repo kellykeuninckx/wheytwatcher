@@ -4,6 +4,8 @@ import SwiftData
 @main
 struct WheytWatcherApp: App {
 
+    @StateObject private var purchaseManager = PurchaseManager()
+
     init() {
         configureTabBarAppearance()
     }
@@ -11,6 +13,7 @@ struct WheytWatcherApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .environmentObject(purchaseManager)
         }
         .modelContainer(for: [
             UserProfile.self,

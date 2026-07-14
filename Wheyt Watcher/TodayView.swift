@@ -837,7 +837,7 @@ struct TodayView: View {
                     lineWidth: 7
                 )
                 .contentShape(Rectangle())
-                .onTapGesture { macroBreakdownSelection = .carbs }
+                .onTapGesture { macroBreakdownSelection = .koolhydraten }
                 
                 Spacer()
                 
@@ -1441,7 +1441,7 @@ struct NewBadgeSheet: View {
 
 enum MacroBreakdownType: String, Identifiable, CaseIterable {
     case eiwit = "Eiwit"
-    case carbs = "Carbs"
+    case koolhydraten = "Koolhydraten"
     case vet = "Vet"
     case vezels = "Vezels"
 
@@ -1450,7 +1450,7 @@ enum MacroBreakdownType: String, Identifiable, CaseIterable {
     var color: Color {
         switch self {
         case .eiwit: return .wwBlue
-        case .carbs: return .wwTeal
+        case .koolhydraten: return .wwTeal
         case .vet: return .wwOrange
         case .vezels: return .wwMint
         }
@@ -1459,7 +1459,7 @@ enum MacroBreakdownType: String, Identifiable, CaseIterable {
     func grams(from entry: FoodLogEntry) -> Double {
         switch self {
         case .eiwit: return entry.proteinGrams
-        case .carbs: return entry.carbsGrams
+        case .koolhydraten: return entry.carbsGrams
         case .vet: return entry.fatGrams
         case .vezels: return entry.fiberGrams
         }
@@ -1516,26 +1516,39 @@ struct MacroBreakdownView: View {
 
                     } else {
 
-                        List {
-                            ForEach(contributions, id: \.name) { item in
-                                HStack {
+                        ScrollView {
 
-                                    Text(item.count > 1 ? "\(item.name) (\(item.count)x)" : item.name)
-                                        .font(.subheadline)
-                                        .foregroundStyle(Color.wwDarkAccent)
+                            VStack(alignment: .leading, spacing: 0) {
 
-                                    Spacer()
+                                ForEach(Array(contributions.enumerated()), id: \.element.name) { index, item in
 
-                                    Text("\(item.grams.roundedInt) g")
-                                        .font(.subheadline.bold())
-                                        .foregroundStyle(initialMacro.color)
+                                    HStack {
+
+                                        Text(item.count > 1 ? "\(item.name) (\(item.count)x)" : item.name)
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.wwDarkAccent)
+
+                                        Spacer()
+
+                                        Text("\(item.grams.roundedInt) g")
+                                            .font(.subheadline.bold())
+                                            .foregroundStyle(Color.wwMint)
+
+                                    }
+                                    .padding(.vertical, 10)
+
+                                    if index < contributions.count - 1 {
+                                        Divider()
+                                    }
 
                                 }
-                                .listRowBackground(Color.wwCardBackground)
+
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .wwCard()
+                            .padding(.horizontal)
+
                         }
-                        .listStyle(.plain)
-                        .scrollContentBackground(.hidden)
 
                     }
 

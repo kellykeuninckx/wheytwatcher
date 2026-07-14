@@ -1217,18 +1217,18 @@ struct AdaptiveCheckInSheet: View {
 enum NutritionTips {
 
     static let all: [String] = [
-        "Wist je dat 1 appel ongeveer 4 g vezels bevat?",
-        "Wist je dat 100 g kipfilet ongeveer 31 g eiwit bevat?",
-        "Volkoren brood bevat meer vezels dan wit brood.",
-        "Wist je dat 1 ei ongeveer 6 g eiwit bevat?",
-        "Peulvruchten zoals linzen zijn rijk aan zowel eiwit als vezels.",
+        "Wist je dat 1 appel ongeveer 4 g vezels bevat? Een makkelijke manier om dichter bij je dagdoel te komen.",
+        "Wist je dat 100 g kipfilet ongeveer 31 g eiwit bevat? Ideaal voor spierherstel na het trainen.",
+        "Volkoren brood bevat meer vezels dan wit brood. Dat houdt je langer verzadigd.",
+        "Wist je dat 1 ei ongeveer 6 g eiwit bevat? Een goedkope eiwitbron bij elke maaltijd.",
+        "Peulvruchten zoals linzen zijn rijk aan zowel eiwit als vezels. Een slimme, plantaardige eiwitbron.",
         "Magere kwark is een van de goedkoopste eiwitbronnen die er zijn.",
-        "Wist je dat een banaan ongeveer 3 g vezels bevat?",
+        "Wist je dat een banaan ongeveer 3 g vezels bevat? Handig vlak vóór of na het sporten.",
         "Voldoende vezels geven je langer een verzadigd gevoel.",
         "Noten zijn een goede bron van gezonde, onverzadigde vetten.",
-        "Wist je dat 100 g Griekse yoghurt ongeveer 10 g eiwit bevat?",
+        "Wist je dat 100 g Griekse yoghurt ongeveer 10 g eiwit bevat? Een prima eiwitrijk tussendoortje.",
         "Groenten met veel water, zoals komkommer, bevatten weinig calorieën maar geven wel een verzadigd gevoel.",
-        "Havermout bevat een combinatie van vezels en langzame koolhydraten.",
+        "Havermout bevat een combinatie van vezels en langzame koolhydraten. Dat geeft je langdurig energie — ideaal voor duursporters.",
         "Spieren groeien tijdens rust, niet tijdens de training zelf.",
         "Een dieetpauze na een lange cut kan je metabolisme helpen herstellen.",
         "Je gewicht kan van dag tot dag schommelen doordat je vocht vasthoudt.",
@@ -1273,8 +1273,32 @@ enum BluntCoachMessages {
         "Consistentie. Ooit van gehoord? Dacht ik al."
     ]
 
+    /// Botte versies van de 20 voedingsfeitjes uit NutritionTips — zelfde feit, met een plagerige staart.
+    static let bluntFactTips: [String] = [
+        "Een appel heeft zo'n 4 g vezels. Dus waar wacht je nog op?",
+        "100 g kipfilet levert je zo'n 31 g eiwit. Aan de bak met die kip.",
+        "Volkoren brood heeft meer vezels dan wit. Kies gewoon het volkoren, joh.",
+        "Eén ei geeft je zo'n 6 g eiwit. Bak er nog eentje bij, hop.",
+        "Linzen zitten vol eiwit én vezels. Kom op, in de pan ermee.",
+        "Magere kwark is spotgoedkoop eiwit. Geen excuus meer.",
+        "Een banaan heeft zo'n 3 g vezels. Eet 'm nou gewoon op.",
+        "Vezels houden je langer vol. Dus eet ze, in plaats van erover te lezen.",
+        "Noten zitten vol gezonde vetten. Neem een handje, geen hele zak.",
+        "100 g Griekse yoghurt geeft je zo'n 10 g eiwit. Simpel, toch?",
+        "Komkommer en co. vullen goed voor weinig calorieën. Snap je 'm?",
+        "Havermout geeft je langdurig energie. Ideaal voor duursporters — dus waar wacht je nog op?",
+        "Spieren groeien tijdens rust, niet tijdens de training. Ga dus ook echt slapen.",
+        "Een dieetpauze na een lange cut helpt je metabolisme herstellen. Neem 'm dan ook echt.",
+        "Je gewicht schommelt door vocht. Niet elke dag paniekeren, joh.",
+        "Geleidelijk zwaarder trainen is de sleutel tot spiergroei. Dus voeg dat gewichtje toe.",
+        "Slaap is net zo belangrijk als je voeding. Ga op tijd naar bed, dan.",
+        "Consistentie over weken telt, niet die ene perfecte dag. Blijf dus gewoon doorgaan.",
+        "Krachttraining tijdens een cut behoudt je spiermassa. Sla die training dus niet over.",
+        "Een te streng tekort leidt vaker tot terugval. Rustig aan dus, ja?"
+    ]
+
     static func message(for date: Date, hasLoggedToday: Bool) -> String {
-        let pool = hasLoggedToday ? general : (loggingReminders + general)
+        let pool = hasLoggedToday ? (general + bluntFactTips) : (loggingReminders + general + bluntFactTips)
         let hour = Calendar.current.component(.hour, from: date)
         let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: date) ?? 0
         return pool[(dayOfYear * 24 + hour) % pool.count]

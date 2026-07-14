@@ -51,9 +51,9 @@ struct ProfileView: View {
 
                         restDaySection
 
-                        premiumCard
-
                         settingsSection
+
+                        premiumCard
 
                         deleteDataSection
 

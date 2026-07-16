@@ -14,6 +14,7 @@ struct OnboardingView: View {
     @State private var heightCm = 180.0
 
     @State private var weightKg = 80.0
+    @State private var targetWeightText = ""
 
     @State private var bodyFatText = ""
 
@@ -34,6 +35,17 @@ struct OnboardingView: View {
 
     @AppStorage("wwWeighInWeekday") private var weighInWeekday = 2
     @AppStorage("wwReminderWeeklyWeighIn") private var reminderWeeklyWeighIn = true
+
+    private var impliedPaceText: String? {
+        guard let targetWeightKg = Double(targetWeightText.replacingOccurrences(of: ",", with: ".")) else {
+            return nil
+        }
+        return GoalDurationAdvisor.impliedPaceDescription(
+            currentWeightKg: weightKg,
+            targetWeightKg: targetWeightKg,
+            durationWeeks: durationWeeks
+        )
+    }
 
     private var weekdayOptions: [(value: Int, name: String)] {
         var calendar = Calendar(identifier: .gregorian)
@@ -200,6 +212,18 @@ struct OnboardingView: View {
 
                     }
 
+                    HStack {
+                        Text("Doelgewicht (optioneel)")
+                            .foregroundStyle(Color.wwDarkAccent)
+                        Spacer()
+                        TextField("kg", text: $targetWeightText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(Color.wwDarkAccent)
+                        Text("kg")
+                            .foregroundStyle(Color.wwSecondaryText)
+                    }
+
                     Picker(
                         "Tempo",
                         selection: $goalPace
@@ -259,6 +283,12 @@ struct OnboardingView: View {
                             .padding()
                             .frame(width: 280)
                             .presentationCompactAdaptation(.popover)
+                    }
+
+                    if let impliedText = impliedPaceText {
+                        Text(impliedText)
+                            .font(.caption)
+                            .foregroundStyle(Color.wwOrange)
                     }
 
                 }
@@ -350,6 +380,8 @@ struct OnboardingView: View {
             heightCm: heightCm,
 
             currentWeightKg: weightKg,
+
+            targetWeightKg: Double(targetWeightText.replacingOccurrences(of: ",", with: ".")),
 
             estimatedBodyFatPercentage: bodyFat,
 

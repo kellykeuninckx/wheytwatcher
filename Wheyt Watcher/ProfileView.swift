@@ -13,9 +13,11 @@ struct ProfileView: View {
     @State private var showingDeleteConfirmation = false
     @State private var showingAddRestDay = false
     @State private var showingPaywall = false
+    @State private var showingBackup = false
 
     @AppStorage("wwBluntCoachMode") private var bluntCoachMode = false
     @AppStorage("wwShowBodyMeasurementsChart") private var showBodyMeasurementsChart = false
+    @AppStorage("wwTrainingCalorieCreditPercent") private var trainingCalorieCreditPercent: Double = 50
     @AppStorage("wwReminderEveningLog") private var reminderEveningLog = true
     @AppStorage("wwReminderWeeklyWeighIn") private var reminderWeeklyWeighIn = true
     @AppStorage("wwReminderGoalEnding") private var reminderGoalEnding = true
@@ -55,6 +57,8 @@ struct ProfileView: View {
 
                         premiumCard
 
+                        backupCard
+
                         deleteDataSection
 
                     }
@@ -72,6 +76,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
+            }
+            .sheet(isPresented: $showingBackup) {
+                BackupView(profile: profile)
             }
             .alert("Gegevens verwijderen", isPresented: $showingDeleteConfirmation) {
                 Button("Nee", role: .cancel) {}
@@ -323,6 +330,25 @@ struct ProfileView: View {
 
             Divider()
 
+            VStack(alignment: .leading, spacing: 4) {
+
+                Stepper(
+                    "Trainingscalorieën terugverdienen: \(Int(trainingCalorieCreditPercent))%",
+                    value: $trainingCalorieCreditPercent,
+                    in: 0...100,
+                    step: 10
+                )
+                .tint(Color.wwTeal)
+                .foregroundStyle(Color.wwDarkAccent)
+
+                Text("Bepaalt hoeveel van je geschatte, per training verbrande calorieën we teruggeven aan je dagbudget. Schattingen vallen vaak hoger uit dan de werkelijkheid — een lager percentage houdt je dichter bij je beoogde tekort of overschot.")
+                    .font(.caption2)
+                    .foregroundStyle(Color.wwTertiaryText)
+
+            }
+
+            Divider()
+
             Text("Herinneringen")
                 .font(.subheadline.bold())
                 .foregroundStyle(Color.wwDarkAccent)
@@ -418,6 +444,28 @@ struct ProfileView: View {
                     .foregroundStyle(Color.wwTertiaryText)
 
             }
+
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .wwCard()
+    }
+
+    // MARK: - Back-up
+
+    private var backupCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+
+            Button {
+                showingBackup = true
+            } label: {
+                Label("Back-up & herstel", systemImage: "square.and.arrow.up.on.square")
+                    .font(.subheadline.bold())
+            }
+            .tint(Color.wwTeal)
+
+            Text("Bewaar al je gegevens in één bestand, of zet een eerdere back-up terug.")
+                .font(.caption2)
+                .foregroundStyle(Color.wwTertiaryText)
 
         }
         .frame(maxWidth: .infinity, alignment: .leading)

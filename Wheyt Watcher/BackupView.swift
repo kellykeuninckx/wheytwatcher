@@ -1,4 +1,3 @@
-
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
@@ -94,7 +93,7 @@ struct BackupView: View {
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.bordered)
-                            .tint(Color.wwOrange)
+                            .tint(Color.wwTeal)
 
                             if let importErrorMessage {
                                 Text(importErrorMessage)

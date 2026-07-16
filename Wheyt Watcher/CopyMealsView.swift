@@ -223,12 +223,26 @@ struct CopyMealDetailView: View {
     let onFinished: () -> Void
 
     @Environment(\.modelContext) private var modelContext
-    @State private var selectedEntries: Set<FoodLogEntry> = []
+
+    private struct CopySelection {
+        var isSelected: Bool = false
+        var gramsText: String
+        var category: MealCategory
+    }
+
+    @State private var selections: [CopySelection]
 
     init(meal: MealCategory, entries: [FoodLogEntry], onFinished: @escaping () -> Void) {
         self.meal = meal
         self.entries = entries
         self.onFinished = onFinished
+        _selections = State(initialValue: entries.map {
+            CopySelection(isSelected: false, gramsText: String($0.grams.roundedInt), category: $0.mealCategory)
+        })
+    }
+
+    private var selectedCount: Int {
+        selections.filter { $0.isSelected }.count
     }
 
     var body: some View {
@@ -237,31 +251,74 @@ struct CopyMealDetailView: View {
             DumbbellPatternBackground()
 
             List {
-                ForEach(entries) { entry in
-                    Button {
-                        toggle(entry)
-                    } label: {
-                        HStack(spacing: 12) {
+                ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
 
-                            Image(systemName: selectedEntries.contains(entry) ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(selectedEntries.contains(entry) ? Color.wwTeal : Color.wwSecondaryText)
+                    VStack(alignment: .leading, spacing: 10) {
 
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(entry.name)
-                                    .font(.subheadline.bold())
-                                    .foregroundStyle(Color.wwDarkAccent)
+                        Button {
+                            selections[index].isSelected.toggle()
+                        } label: {
+                            HStack(spacing: 12) {
 
-                                Text("\(entry.grams.roundedInt) g • \(entry.calories.roundedInt) kcal")
-                                    .font(.caption)
-                                    .foregroundStyle(Color.wwSecondaryText)
+                                Image(systemName: selections[index].isSelected ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(selections[index].isSelected ? Color.wwTeal : Color.wwSecondaryText)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(entry.name)
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(Color.wwDarkAccent)
+
+                                    Text("origineel: \(entry.grams.roundedInt) g • \(entry.calories.roundedInt) kcal")
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.wwTertiaryText)
+                                }
+
+                                Spacer()
+
                             }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
 
-                            Spacer()
+                        if selections[index].isSelected {
+
+                            HStack(spacing: 16) {
+
+                                HStack(spacing: 6) {
+                                    Text("Gram")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.wwSecondaryText)
+
+                                    TextField("gram", text: $selections[index].gramsText)
+                                        .keyboardType(.decimalPad)
+                                        .multilineTextAlignment(.trailing)
+                                        .frame(width: 56)
+                                        .foregroundStyle(Color.wwDarkAccent)
+                                }
+
+                                Spacer()
+
+                                Menu {
+                                    ForEach(MealCategory.allCases) { category in
+                                        Button(category.rawValue) {
+                                            selections[index].category = category
+                                        }
+                                    }
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Text(selections[index].category.rawValue)
+                                        Image(systemName: "chevron.down")
+                                    }
+                                    .font(.caption.bold())
+                                    .foregroundStyle(Color.wwOrange)
+                                }
+
+                            }
+                            .padding(.leading, 32)
 
                         }
-                        .contentShape(Rectangle())
+
                     }
-                    .buttonStyle(.plain)
                     .cardRow()
                 }
             }
@@ -275,39 +332,35 @@ struct CopyMealDetailView: View {
             Button {
                 copySelected()
             } label: {
-                Text("Kopieer \(selectedEntries.count) product\(selectedEntries.count == 1 ? "" : "en")")
+                Text("Kopieer \(selectedCount) product\(selectedCount == 1 ? "" : "en")")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .tint(Color.wwOrange)
-            .disabled(selectedEntries.isEmpty)
+            .disabled(selectedCount == 0)
             .padding()
             .background(.thinMaterial)
         }
     }
 
-    private func toggle(_ entry: FoodLogEntry) {
-        if selectedEntries.contains(entry) {
-            selectedEntries.remove(entry)
-        } else {
-            selectedEntries.insert(entry)
-        }
-    }
-
     private func copySelected() {
-        for item in entries where selectedEntries.contains(item) {
+        for (index, entry) in entries.enumerated() where selections[index].isSelected {
+
+            let selection = selections[index]
+            let newGrams = Double(selection.gramsText.replacingOccurrences(of: ",", with: ".")) ?? entry.grams
+            let ratio = entry.grams > 0 ? newGrams / entry.grams : 1
 
             let newEntry = FoodLogEntry(
                 date: Date(),
-                mealCategory: item.mealCategory,
-                name: item.name,
-                grams: item.grams,
-                calories: item.calories,
-                proteinGrams: item.proteinGrams,
-                carbsGrams: item.carbsGrams,
-                fatGrams: item.fatGrams,
-                fiberGrams: item.fiberGrams,
-                note: item.note
+                mealCategory: selection.category,
+                name: entry.name,
+                grams: newGrams,
+                calories: entry.calories * ratio,
+                proteinGrams: entry.proteinGrams * ratio,
+                carbsGrams: entry.carbsGrams * ratio,
+                fatGrams: entry.fatGrams * ratio,
+                fiberGrams: entry.fiberGrams * ratio,
+                note: entry.note
             )
 
             modelContext.insert(newEntry)

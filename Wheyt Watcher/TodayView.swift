@@ -39,6 +39,7 @@ struct TodayView: View {
 
     @AppStorage("wwIsDarkTheme") private var isDarkTheme: Bool = true
     @AppStorage("wwBluntCoachMode") private var bluntCoachMode = false
+    @AppStorage("wwTrainingCalorieCreditPercent") private var trainingCalorieCreditPercent: Double = 50
     @AppStorage("wwReminderEveningLog") private var reminderEveningLog = true
     @AppStorage("wwReminderGoalEnding") private var reminderGoalEnding = true
     @AppStorage("wwReminderWeeklyWeighIn") private var reminderWeeklyWeighIn = true
@@ -62,7 +63,7 @@ struct TodayView: View {
             for: profile,
             goalMode: profile.goalMode,
             goalPace: profile.goalPace,
-            extraTrainingCalories: todaysTrainingCalories,
+            extraTrainingCalories: todaysTrainingCalories * (trainingCalorieCreditPercent / 100),
             manualCalorieAdjustment: profile.activeGoalPeriod?.calorieAdjustment ?? 0
         )
     }

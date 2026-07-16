@@ -156,6 +156,7 @@ final class UserProfile {
     var sex: Sex
     var heightCm: Double
     var currentWeightKg: Double
+    var targetWeightKg: Double?
     var estimatedBodyFatPercentage: Double?
     var goalMode: GoalMode
     var goalPace: GoalPace
@@ -171,6 +172,7 @@ final class UserProfile {
         sex: Sex,
         heightCm: Double,
         currentWeightKg: Double,
+        targetWeightKg: Double? = nil,
         estimatedBodyFatPercentage: Double? = nil,
         goalMode: GoalMode,
         goalPace: GoalPace,
@@ -181,6 +183,7 @@ final class UserProfile {
         self.sex = sex
         self.heightCm = heightCm
         self.currentWeightKg = currentWeightKg
+        self.targetWeightKg = targetWeightKg
         self.estimatedBodyFatPercentage = estimatedBodyFatPercentage
         self.goalMode = goalMode
         self.goalPace = goalPace
@@ -333,6 +336,33 @@ enum GoalDurationAdvisor {
                 return "Een agressieve bulk duurt meestal 8 weken. Je komt sneller aan, maar met meer kans op overtollig vet — hou dit kort en evalueer daarna opnieuw."
             }
         }
+    }
+
+    /// De omgekeerde richting: gegeven een doelgewicht en een gekozen duur, wat voor tempo
+    /// impliceert dat? Puur informatief — geen blokkade, geen waarschuwing.
+    static func impliedPaceDescription(currentWeightKg: Double, targetWeightKg: Double, durationWeeks: Int) -> String? {
+        guard durationWeeks > 0, currentWeightKg > 0 else { return nil }
+
+        let totalChange = abs(targetWeightKg - currentWeightKg)
+        guard totalChange > 0.1 else { return nil }
+
+        let weeklyRateKg = totalChange / Double(durationWeeks)
+        let weeklyRatePercent = (weeklyRateKg / currentWeightKg) * 100
+
+        let paceLabel: String
+        switch weeklyRatePercent {
+        case ..<0.4:
+            paceLabel = "een voorzichtig tempo"
+        case 0.4..<0.75:
+            paceLabel = "een gemiddeld tempo"
+        default:
+            paceLabel = "een agressief tempo"
+        }
+
+        let roundedRate = (weeklyRateKg * 10).rounded() / 10
+        let verb = targetWeightKg < currentWeightKg ? "afvallen" : "aankomen"
+
+        return "Dat komt neer op ongeveer \(roundedRate) kg per week \(verb) — dat valt onder \(paceLabel)."
     }
 }
 

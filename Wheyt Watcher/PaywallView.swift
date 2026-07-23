@@ -34,11 +34,10 @@ struct PaywallView: View {
                         }
                         .padding(.top, 20)
 
-                        // TODO: placeholder-lijst — vervangen zodra het definitieve premium-pakket vaststaat
                         VStack(alignment: .leading, spacing: 14) {
-                            featureRow(icon: "barcode.viewfinder", text: "Barcode scanner & productzoekfunctie")
-                            featureRow(icon: "chart.line.uptrend.xyaxis", text: "Uitvergrote grafieken & doelgeschiedenis")
-                            featureRow(icon: "ruler", text: "Lichaamsmaten bijhouden")
+                            featureRow(icon: "barcode.viewfinder", text: "Barcode scanner")
+                            featureRow(icon: "chart.line.uptrend.xyaxis", text: "Uitvergrote grafieken & langere geschiedenis")
+                            featureRow(icon: "chart.pie.fill", text: "Gedetailleerd macro-overzicht per dag")
                             featureRow(icon: "sparkles", text: "De slimme 2-wekelijkse check-in")
                         }
                         .padding()

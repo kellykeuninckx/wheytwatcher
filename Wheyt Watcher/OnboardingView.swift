@@ -146,7 +146,7 @@ struct OnboardingView: View {
                 }
                 .listRowBackground(Color.wwCardBackground)
 
-                Section("Lichaamsmaten (optioneel, in cm)") {
+                Section("Lichaamsmetingen (optioneel, in cm)") {
 
                     HStack {
                         Text("Taille").foregroundStyle(Color.wwDarkAccent)

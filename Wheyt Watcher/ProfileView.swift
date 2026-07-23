@@ -301,7 +301,7 @@ struct ProfileView: View {
         .wwCard()
     }
 
-    // MARK: - Instellingen (lichaamsmaten-grafiek + herinneringen)
+    // MARK: - Instellingen (lichaamsmetingen-grafiek + herinneringen)
 
     private var settingsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -324,7 +324,7 @@ struct ProfileView: View {
 
             Divider()
 
-            Toggle("Toon lichaamsmaten in Progressie", isOn: $showBodyMeasurementsChart)
+            Toggle("Toon lichaamsmetingen in Progressie", isOn: $showBodyMeasurementsChart)
                 .tint(Color.wwTeal)
                 .foregroundStyle(Color.wwDarkAccent)
 

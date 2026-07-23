@@ -4,6 +4,8 @@ import SwiftData
 struct TodayView: View {
     let profile: UserProfile
 
+    @EnvironmentObject private var purchaseManager: PurchaseManager
+
     @Environment(\.modelContext) private var modelContext
     @Query private var foodEntries: [FoodLogEntry]
     @Query private var trainings: [TrainingSession]
@@ -29,6 +31,9 @@ struct TodayView: View {
     @State private var adaptiveCheckInResult: AdaptiveCheckInResult?
     @State private var showingMissedDaysPrompt = false
     @State private var newBadgeBatch: BadgeUnlockBatch?
+    @State private var showingPaywall = false
+
+    @AppStorage("wwLastAdaptiveCheckInTeaserTimestamp") private var lastAdaptiveCheckInTeaserTimestamp: Double = 0
 
     @AppStorage("wwLastAcknowledgedKwarkTier") private var lastAcknowledgedKwarkTier = ""
     @AppStorage("wwLastAcknowledgedStreakTier") private var lastAcknowledgedStreakTier = ""
@@ -245,6 +250,9 @@ struct TodayView: View {
             .sheet(isPresented: $showingBarcodeScanner) {
                 BarcodeScannerView()
             }
+            .sheet(isPresented: $showingPaywall) {
+                PaywallView()
+            }
             .sheet(isPresented: $showingFoodSearch) {
                 FoodSearchView()
             }
@@ -360,6 +368,16 @@ struct TodayView: View {
         return "🎉 Goed bezig! Je hebt je \(profile.goalMode.rawValue.lowercased()) van \(weeks) weken volgehouden. Kies hieronder hoe je verder wil — nog een periode in hetzelfde doel, of iets nieuws."
     }
 
+    // MARK: - Macro-detailweergave (premium)
+
+    private func selectMacroBreakdown(_ macro: MacroBreakdownType) {
+        if purchaseManager.isPremiumUnlocked {
+            macroBreakdownSelection = macro
+        } else {
+            showingPaywall = true
+        }
+    }
+
     // MARK: - Slimme 2-wekelijkse check-in
 
     private func checkAdaptiveCheckIn() {
@@ -375,6 +393,15 @@ struct TodayView: View {
         ).day ?? 0
 
         guard daysSinceCheckIn >= 14 else { return }
+
+        guard purchaseManager.isPremiumUnlocked else {
+            // Niet vaker dan 1x per dag lastigvallen met de paywall als de check-in klaarstaat.
+            let lastTeaser = Date(timeIntervalSince1970: lastAdaptiveCheckInTeaserTimestamp)
+            guard Date().timeIntervalSince(lastTeaser) > 60 * 60 * 24 else { return }
+            lastAdaptiveCheckInTeaserTimestamp = Date().timeIntervalSince1970
+            showingPaywall = true
+            return
+        }
 
         adaptiveCheckInResult = AdaptiveCheckInEvaluator.evaluate(
             period: period,
@@ -612,7 +639,11 @@ struct TodayView: View {
                 showingMeals = true
             },
             QuickAddOption(icon: "barcode.viewfinder", title: "Scan barcode") {
-                showingBarcodeScanner = true
+                if purchaseManager.isPremiumUnlocked {
+                    showingBarcodeScanner = true
+                } else {
+                    showingPaywall = true
+                }
             },
             QuickAddOption(icon: "magnifyingglass", title: "Zoek product") {
                 showingFoodSearch = true
@@ -826,7 +857,7 @@ struct TodayView: View {
                     lineWidth: 7
                 )
                 .contentShape(Rectangle())
-                .onTapGesture { macroBreakdownSelection = .eiwit }
+                .onTapGesture { selectMacroBreakdown(.eiwit) }
                 
                 Spacer()
                 
@@ -839,7 +870,7 @@ struct TodayView: View {
                     lineWidth: 7
                 )
                 .contentShape(Rectangle())
-                .onTapGesture { macroBreakdownSelection = .koolhydraten }
+                .onTapGesture { selectMacroBreakdown(.koolhydraten) }
                 
                 Spacer()
                 
@@ -852,7 +883,7 @@ struct TodayView: View {
                     lineWidth: 7
                 )
                 .contentShape(Rectangle())
-                .onTapGesture { macroBreakdownSelection = .vet }
+                .onTapGesture { selectMacroBreakdown(.vet) }
                 
                 Spacer()
                 
@@ -865,7 +896,7 @@ struct TodayView: View {
                     lineWidth: 7
                 )
                 .contentShape(Rectangle())
-                .onTapGesture { macroBreakdownSelection = .vezels }
+                .onTapGesture { selectMacroBreakdown(.vezels) }
                 
                 Spacer()
             }

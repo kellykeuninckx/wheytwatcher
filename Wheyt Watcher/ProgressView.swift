@@ -6,6 +6,8 @@ struct ProgressViewScreen: View {
 
     let profile: UserProfile
 
+    @EnvironmentObject private var purchaseManager: PurchaseManager
+
     @Query(sort: \WeightLog.date) private var weightLogs: [WeightLog]
     @Query(sort: \FoodLogEntry.date) private var foodEntries: [FoodLogEntry]
     @Query(sort: \TrainingSession.date) private var trainings: [TrainingSession]
@@ -21,6 +23,7 @@ struct ProgressViewScreen: View {
     @State private var showingEnlargedProtein = false
     @State private var selectedMeasurementType: BodyMeasurementType = .waist
     @State private var showingEnlargedMeasurement = false
+    @State private var showingPaywall = false
 
     enum ChartRange: String, CaseIterable, Identifiable {
         case twoWeeks = "14 dagen"
@@ -294,6 +297,9 @@ struct ProgressViewScreen: View {
                         }
                     }
                 }
+            }
+            .sheet(isPresented: $showingPaywall) {
+                PaywallView()
             }
         }
     }
@@ -579,6 +585,12 @@ struct ProgressViewScreen: View {
             }
         }
         .pickerStyle(.segmented)
+        .onChange(of: selectedRange) {
+            // Langere geschiedenis (30 dagen/Alles) is een premium-feature — 14 dagen blijft gratis.
+            guard !purchaseManager.isPremiumUnlocked, selectedRange != .twoWeeks else { return }
+            selectedRange = .twoWeeks
+            showingPaywall = true
+        }
     }
 
     // MARK: - Gewicht
@@ -658,6 +670,10 @@ struct ProgressViewScreen: View {
         .contentShape(Rectangle())
         .onTapGesture {
             guard !filteredWeights.isEmpty else { return }
+            guard purchaseManager.isPremiumUnlocked else {
+                showingPaywall = true
+                return
+            }
             showingEnlargedWeight = true
         }
     }
@@ -716,6 +732,10 @@ struct ProgressViewScreen: View {
         .contentShape(Rectangle())
         .onTapGesture {
             guard !dailyCalories.isEmpty else { return }
+            guard purchaseManager.isPremiumUnlocked else {
+                showingPaywall = true
+                return
+            }
             showingEnlargedCalories = true
         }
     }
@@ -786,11 +806,15 @@ struct ProgressViewScreen: View {
         .contentShape(Rectangle())
         .onTapGesture {
             guard !dailyProtein.isEmpty else { return }
+            guard purchaseManager.isPremiumUnlocked else {
+                showingPaywall = true
+                return
+            }
             showingEnlargedProtein = true
         }
     }
 
-    // MARK: - Lichaamsmaten (optioneel, uit te zetten in Profiel)
+    // MARK: - Lichaamsmetingen (optioneel, uit te zetten in Profiel)
 
     private var availableMeasurementTypes: [BodyMeasurementType] {
         BodyMeasurementType.allCases.filter { type in
@@ -820,7 +844,7 @@ struct ProgressViewScreen: View {
     private var bodyMeasurementsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Lichaamsmaten")
+                Text("Lichaamsmetingen")
                     .font(.subheadline.bold())
                     .foregroundStyle(Color.wwDarkAccent)
 
@@ -882,6 +906,10 @@ struct ProgressViewScreen: View {
         .contentShape(Rectangle())
         .onTapGesture {
             guard !measurementPoints.isEmpty else { return }
+            guard purchaseManager.isPremiumUnlocked else {
+                showingPaywall = true
+                return
+            }
             showingEnlargedMeasurement = true
         }
         .onAppear {

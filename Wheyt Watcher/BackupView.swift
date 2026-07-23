@@ -199,7 +199,7 @@ struct BackupView: View {
                 pendingImportPayload = payload
                 showingRestoreConfirmation = true
             } catch {
-                importErrorMessage = "Dit bestand kon niet gelezen worden. Is het een geldig Wheyt Watcher-back-up-bestand?"
+                importErrorMessage = "Dit bestand kon niet gelezen worden. Is het een geldig Whey, mate!-back-up-bestand?"
             }
 
         case .failure:

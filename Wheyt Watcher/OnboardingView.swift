@@ -318,7 +318,7 @@ struct OnboardingView: View {
 
                     } label: {
 
-                        Text("Start Wheyt Watcher")
+                        Text("Start Whey, mate!")
                             .frame(maxWidth: .infinity)
 
                     }

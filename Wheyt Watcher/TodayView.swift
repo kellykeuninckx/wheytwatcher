@@ -231,7 +231,7 @@ struct TodayView: View {
             .sheet(isPresented: $showingAddFood) {
                 AddFoodView()
             }.sheet(isPresented: $showingCopyMeal) {
-                CopyMealsView()
+                CopyProductsEntryView()
             }
 
             .sheet(isPresented: $showingFavorites) {
@@ -381,7 +381,8 @@ struct TodayView: View {
             foodEntries: foodEntries,
             weightLogs: weightLogs,
             trainings: trainings,
-            dayStatuses: dayStatuses
+            dayStatuses: dayStatuses,
+            dailyTargetSnapshots: snapshots
         )
         showingAdaptiveCheckInSheet = true
     }
@@ -1192,6 +1193,7 @@ struct AdaptiveCheckInSheet: View {
         case .insufficientData: return "🧐"
         case .onTrack: return "✅"
         case .suggestAdjustment: return "💡"
+        case .suggestAdherence: return "🎯"
         }
     }
 
@@ -1200,6 +1202,7 @@ struct AdaptiveCheckInSheet: View {
         case .insufficientData: return "Nog even geduld"
         case .onTrack: return "Je zit goed op schema!"
         case .suggestAdjustment: return "Kleine bijstelling?"
+        case .suggestAdherence: return "Focus op je caloriedoel"
         }
     }
 
@@ -1208,6 +1211,7 @@ struct AdaptiveCheckInSheet: View {
         case .insufficientData(let reason): return reason
         case .onTrack(let message): return message
         case .suggestAdjustment(_, let reasoning): return reasoning
+        case .suggestAdherence(let reasoning): return reasoning
         }
     }
 

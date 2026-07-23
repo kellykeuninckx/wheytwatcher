@@ -156,6 +156,16 @@ struct ProgressViewScreen: View {
         ]
     }
 
+    /// Zoomt de Y-as in op de werkelijke schommeling i.p.v. Charts' automatische afronding op hele kg's,
+    /// zodat kleine (paar honderd gram) veranderingen tussen wegingen ook zichtbaar zijn.
+    private var weightYDomain: ClosedRange<Double> {
+        let values = filteredWeights.map { $0.weightKg } + weightTrendPoints.map { $0.value }
+        guard let minValue = values.min(), let maxValue = values.max() else { return 0...1 }
+
+        let padding = max((maxValue - minValue) * 0.15, 0.3)
+        return (minValue - padding)...(maxValue + padding)
+    }
+
     private var axisStride: Int {
         max(totalDaysInRange / 5, 1)
     }
@@ -197,6 +207,7 @@ struct ProgressViewScreen: View {
                     Chart {
                         weightChartMarks
                     }
+                    .chartYScale(domain: weightYDomain)
                     .chartXAxis {
                         AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                             AxisGridLine()
@@ -575,12 +586,12 @@ struct ProgressViewScreen: View {
     @ChartContentBuilder
     private var weightChartMarks: some ChartContent {
         ForEach(filteredWeights) { log in
-            PointMark(
+            LineMark(
                 x: .value("Datum", log.date, unit: .day),
                 y: .value("Gewicht", log.weightKg)
             )
-            .foregroundStyle(Color.wwBlue.opacity(0.6))
-            .symbolSize(20)
+            .foregroundStyle(Color.wwTeal)
+            .symbol(.circle)
         }
 
         ForEach(weightTrendPoints, id: \.date) { point in
@@ -588,8 +599,8 @@ struct ProgressViewScreen: View {
                 x: .value("Datum", point.date, unit: .day),
                 y: .value("Trend", point.value)
             )
-            .foregroundStyle(Color.wwTeal)
-            .lineStyle(StrokeStyle(lineWidth: 2.5))
+            .foregroundStyle(Color.wwTeal.opacity(0.6))
+            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
         }
     }
 
@@ -621,6 +632,7 @@ struct ProgressViewScreen: View {
                     weightChartMarks
                 }
                 .frame(height: 130)
+                .chartYScale(domain: weightYDomain)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: compactAxisStride)) { _ in
                         AxisGridLine()

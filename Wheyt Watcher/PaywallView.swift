@@ -23,7 +23,7 @@ struct PaywallView: View {
                                 .font(.system(size: 40))
                                 .foregroundStyle(Color.wwOrange)
 
-                            Text("Wheyt Watcher Premium")
+                            Text("Whey, mate! Premium")
                                 .font(.title2.bold())
                                 .foregroundStyle(Color.wwDarkAccent)
 

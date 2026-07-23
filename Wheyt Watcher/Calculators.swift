@@ -149,6 +149,9 @@ enum AdaptiveCheckInResult {
     case onTrack(message: String)
     /// Voortgang blijft achter — voorstel om de calorieën met `kcal` bij te stellen.
     case suggestAdjustment(kcal: Double, reasoning: String)
+    /// Voortgang blijft achter, maar niet doordat het doel te hoog/laag staat — de gebruiker hield
+    /// zich niet aan de huidige caloriebehoefte. Een aanpassing heeft dan nog geen zin.
+    case suggestAdherence(reasoning: String)
 }
 
 enum AdaptiveCheckInEvaluator {
@@ -159,7 +162,8 @@ enum AdaptiveCheckInEvaluator {
         foodEntries: [FoodLogEntry],
         weightLogs: [WeightLog],
         trainings: [TrainingSession],
-        dayStatuses: [DayStatus] = []
+        dayStatuses: [DayStatus] = [],
+        dailyTargetSnapshots: [DailyTargetSnapshot] = []
     ) -> AdaptiveCheckInResult {
 
         let calendar = Calendar.current
@@ -204,22 +208,39 @@ enum AdaptiveCheckInEvaluator {
             )
         }
 
+        let adherence = calorieAdherence(
+            windowStart: windowStart,
+            foodEntries: foodEntries,
+            snapshots: dailyTargetSnapshots,
+            markedDays: markedDaysSet
+        )
+
         switch period.goalMode {
 
         case .cut:
             if weeklyRate > -0.1 {
+                if adherence == .aboveTarget {
+                    return .suggestAdherence(
+                        reasoning: "Je data laat zien dat je de afgelopen 2 weken regelmatig boven je caloriebehoefte hebt gegeten. Probeer je hier zo goed mogelijk aan te houden, dan bereik je sneller je doel!"
+                    )
+                }
                 return .suggestAdjustment(
                     kcal: -100,
-                    reasoning: "Je hebt de afgelopen 2 weken consistent gelogd en \(trainingCount)x getraind, maar je gewicht daalt nauwelijks. Advies: verlaag je caloriebehoefte met 100 kcal per dag."
+                    reasoning: "Je hebt de afgelopen 2 weken consistent gelogd en \(trainingCount)x getraind, maar je gewicht daalt niet genoeg ten opzichte van je doel. Advies: verlaag je caloriebehoefte met 100 kcal per dag."
                 )
             }
             return .onTrack(message: "Je gewicht daalt zoals verwacht bij je cut. Ga zo door!")
 
         case .bulk:
             if weeklyRate < 0.1 {
+                if adherence == .belowTarget {
+                    return .suggestAdherence(
+                        reasoning: "Je data laat zien dat je de afgelopen 2 weken regelmatig onder je caloriebehoefte hebt gegeten. Probeer je hier zo goed mogelijk aan te houden, dan bereik je sneller je doel!"
+                    )
+                }
                 return .suggestAdjustment(
                     kcal: 100,
-                    reasoning: "Je hebt de afgelopen 2 weken consistent gelogd en \(trainingCount)x getraind, maar je komt nauwelijks aan. Advies: verhoog je caloriebehoefte met 100 kcal per dag."
+                    reasoning: "Je hebt de afgelopen 2 weken consistent gelogd en \(trainingCount)x getraind, maar je komt niet genoeg aan als we kijken naar je doel. Advies: verhoog je caloriebehoefte met 100 kcal per dag."
                 )
             }
             return .onTrack(message: "Je gewicht stijgt zoals verwacht bij je bulk. Ga zo door!")
@@ -228,6 +249,54 @@ enum AdaptiveCheckInEvaluator {
             return .onTrack(message: "Je gewicht blijft stabiel — precies de bedoeling bij onderhoud.")
 
         }
+    }
+
+    private enum CalorieAdherence {
+        case aboveTarget
+        case belowTarget
+        case onTarget
+        case unknown
+    }
+
+    /// Vergelijkt werkelijk gelogde calorieën per dag met de caloriebehoefte die op dát moment gold
+    /// (via `DailyTargetSnapshot`), zodat een advies om de behoefte bij te stellen niet wordt gegeven
+    /// als het eigenlijke probleem is dat de huidige behoefte niet gehaald werd.
+    private static func calorieAdherence(
+        windowStart: Date,
+        foodEntries: [FoodLogEntry],
+        snapshots: [DailyTargetSnapshot],
+        markedDays: Set<Date>
+    ) -> CalorieAdherence {
+        let calendar = Calendar.current
+
+        let dailyCalories = Dictionary(grouping: foodEntries.filter { $0.date >= windowStart }) {
+            calendar.startOfDay(for: $0.date)
+        }.mapValues { entries in entries.reduce(0) { $0 + $1.calories } }
+
+        let dailyTargets = Dictionary(grouping: snapshots.filter { $0.date >= windowStart }) {
+            calendar.startOfDay(for: $0.date)
+        }.compactMapValues { $0.first?.calories }
+
+        let comparableDays = dailyCalories.keys.filter { !markedDays.contains($0) }
+
+        let diffs: [Double] = comparableDays.compactMap { day in
+            guard let actual = dailyCalories[day], let target = dailyTargets[day] else { return nil }
+            return actual - target
+        }
+        let targets: [Double] = comparableDays.compactMap { dailyTargets[$0] }
+
+        guard !diffs.isEmpty, !targets.isEmpty else { return .unknown }
+
+        let averageDiff = diffs.reduce(0, +) / Double(diffs.count)
+        let averageTarget = targets.reduce(0, +) / Double(targets.count)
+
+        // 5% marge (met een bodem van 50 kcal): kleine, dagelijkse schommelingen tellen niet als
+        // structurele over- of onderconsumptie.
+        let threshold = max(averageTarget * 0.05, 50)
+
+        if averageDiff > threshold { return .aboveTarget }
+        if averageDiff < -threshold { return .belowTarget }
+        return .onTarget
     }
 
     /// Kleinste-kwadraten regressie over een voortschrijdend gemiddelde, geeft kg/week terug.

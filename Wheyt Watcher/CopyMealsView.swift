@@ -1,10 +1,238 @@
 import SwiftUI
 import SwiftData
 
-struct CopyMealsView: View {
-    
+// MARK: - Startpunt: kopieer een recent product, of blader via een specifieke dag
+
+struct CopyProductsEntryView: View {
+
     @Environment(\.dismiss) private var dismiss
-    
+    @Environment(\.modelContext) private var modelContext
+
+    @Query private var foodEntries: [FoodLogEntry]
+
+    @State private var products: [FoodLogEntry] = []
+    @State private var selections: [CopySelection] = []
+
+    private struct CopySelection {
+        var isSelected: Bool = false
+        var gramsText: String
+        var category: MealCategory
+    }
+
+    private var selectedCount: Int {
+        selections.filter { $0.isSelected }.count
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+
+                DumbbellPatternBackground()
+
+                List {
+
+                    if products.isEmpty {
+
+                        WWPlaceholderCard(
+                            icon: "doc.on.doc",
+                            color: .wwOrange,
+                            title: "Nog geen producten",
+                            message: "Log eerst een product, dan kan je het hier terugvinden om te kopiëren."
+                        )
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+
+                    } else {
+
+                        Text("Recente producten")
+                            .font(.caption.bold())
+                            .foregroundStyle(Color.wwSecondaryText)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 2, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+
+                        ForEach(Array(products.enumerated()), id: \.element.id) { index, entry in
+
+                            VStack(alignment: .leading, spacing: 10) {
+
+                                Button {
+                                    selections[index].isSelected.toggle()
+                                } label: {
+                                    HStack(spacing: 12) {
+
+                                        Image(systemName: selections[index].isSelected ? "checkmark.circle.fill" : "circle")
+                                            .foregroundStyle(selections[index].isSelected ? Color.wwTeal : Color.wwSecondaryText)
+
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(entry.name)
+                                                .font(.subheadline.bold())
+                                                .foregroundStyle(Color.wwDarkAccent)
+
+                                            Text("laatst: \(entry.grams.roundedInt) g • \(entry.calories.roundedInt) kcal")
+                                                .font(.caption2)
+                                                .foregroundStyle(Color.wwTertiaryText)
+                                        }
+
+                                        Spacer()
+
+                                        Text(entry.date, format: .dateTime.day().month(.abbreviated))
+                                            .font(.caption2)
+                                            .foregroundStyle(Color.wwSecondaryText)
+
+                                    }
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+
+                                if selections[index].isSelected {
+
+                                    HStack(spacing: 16) {
+
+                                        HStack(spacing: 6) {
+                                            Text("Gram")
+                                                .font(.caption)
+                                                .foregroundStyle(Color.wwSecondaryText)
+
+                                            TextField("gram", text: $selections[index].gramsText)
+                                                .keyboardType(.decimalPad)
+                                                .multilineTextAlignment(.trailing)
+                                                .frame(width: 56)
+                                                .foregroundStyle(Color.wwDarkAccent)
+                                        }
+
+                                        Spacer()
+
+                                        Menu {
+                                            ForEach(MealCategory.allCases) { cat in
+                                                Button(cat.rawValue) {
+                                                    selections[index].category = cat
+                                                }
+                                            }
+                                        } label: {
+                                            HStack(spacing: 4) {
+                                                Text(selections[index].category.rawValue)
+                                                Image(systemName: "chevron.down")
+                                            }
+                                            .font(.caption.bold())
+                                            .foregroundStyle(Color.wwOrange)
+                                        }
+
+                                    }
+                                    .padding(.leading, 32)
+
+                                }
+
+                            }
+                            .cardRow()
+
+                        }
+
+                    }
+
+                    NavigationLink {
+                        CopyMealsView(onFinished: { dismiss() })
+                    } label: {
+                        HStack {
+                            Text("Bekijk een specifieke dag")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(Color.wwTeal)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(Color.wwTeal)
+                        }
+                    }
+                    .cardRow()
+
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+
+            }
+            .tint(Color.wwOrange)
+            .navigationTitle("Kopieer product")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Sluiten") {
+                        dismiss()
+                    }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if selectedCount > 0 {
+                    Button {
+                        copySelected()
+                    } label: {
+                        Text("Kopieer \(selectedCount) product\(selectedCount == 1 ? "" : "en")")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.wwOrange)
+                    .padding()
+                    .background(.thinMaterial)
+                }
+            }
+            .onAppear {
+                guard products.isEmpty else { return }
+
+                var seenNames = Set<String>()
+                var recent: [FoodLogEntry] = []
+
+                for entry in foodEntries.sorted(by: { $0.date > $1.date }) {
+                    let key = entry.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    guard !key.isEmpty, !seenNames.contains(key) else { continue }
+                    seenNames.insert(key)
+                    recent.append(entry)
+                    if recent.count == 30 { break }
+                }
+
+                products = recent
+                selections = recent.map {
+                    CopySelection(isSelected: false, gramsText: String($0.grams.roundedInt), category: $0.mealCategory)
+                }
+            }
+        }
+    }
+
+    private func copySelected() {
+        for (index, entry) in products.enumerated() where selections[index].isSelected {
+
+            let selection = selections[index]
+            let newGrams = Double(selection.gramsText.replacingOccurrences(of: ",", with: ".")) ?? entry.grams
+            let ratio = entry.grams > 0 ? newGrams / entry.grams : 1
+
+            let newEntry = FoodLogEntry(
+                date: Date(),
+                mealCategory: selection.category,
+                name: entry.name,
+                grams: newGrams,
+                calories: entry.calories * ratio,
+                proteinGrams: entry.proteinGrams * ratio,
+                carbsGrams: entry.carbsGrams * ratio,
+                fatGrams: entry.fatGrams * ratio,
+                fiberGrams: entry.fiberGrams * ratio,
+                note: entry.note
+            )
+
+            modelContext.insert(newEntry)
+
+        }
+
+        try? modelContext.save()
+
+        dismiss()
+    }
+}
+
+#Preview {
+    CopyProductsEntryView()
+}
+
+struct CopyMealsView: View {
+
+    let onFinished: () -> Void
+
     @Query private var foodEntries: [FoodLogEntry]
     
     @State private var selectedDate: Date = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
@@ -24,7 +252,6 @@ struct CopyMealsView: View {
     }
     
     var body: some View {
-        NavigationStack {
             ZStack {
 
                 DumbbellPatternBackground()
@@ -62,7 +289,7 @@ struct CopyMealsView: View {
                                 CopyMealDetailView(
                                     meal: meal.0,
                                     entries: meal.1,
-                                    onFinished: { dismiss() }
+                                    onFinished: { onFinished() }
                                 )
 
                             } label: {
@@ -98,7 +325,7 @@ struct CopyMealsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Sluiten") {
-                        dismiss()
+                        onFinished()
                     }
                 }
             }
@@ -137,9 +364,8 @@ struct CopyMealsView: View {
                     }
                 }
             }
-        }
     }
-    
+
     private var isToday: Bool {
         Calendar.current.isDateInToday(selectedDate)
     }
@@ -388,5 +614,7 @@ private extension View {
 }
 
 #Preview {
-    CopyMealsView()
+    NavigationStack {
+        CopyMealsView(onFinished: {})
+    }
 }

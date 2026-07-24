@@ -5,8 +5,10 @@ struct MealDetailView: View {
     
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    
+
     let meal: SavedMeal
+
+    @State private var selectedCategory: MealCategory = .lunch
 
     private var totalCalories: Int {
         Int(meal.items.reduce(0) { $0 + $1.calories }.rounded())
@@ -71,13 +73,39 @@ struct MealDetailView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .wwCard()
 
+                    HStack {
+
+                        Text("Eetmoment")
+                            .foregroundStyle(Color.wwDarkAccent)
+
+                        Spacer()
+
+                        Menu {
+                            ForEach(MealCategory.allCases) { category in
+                                Button(category.rawValue) {
+                                    selectedCategory = category
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(selectedCategory.rawValue)
+                                Image(systemName: "chevron.down")
+                            }
+                            .font(.subheadline.bold())
+                            .foregroundStyle(Color.wwOrange)
+                        }
+
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .wwCard()
+
                     Button {
 
                         for item in meal.items {
 
                             let entry = FoodLogEntry(
                                 date: Date(),
-                                mealCategory: .lunch,
+                                mealCategory: selectedCategory,
                                 name: item.name,
                                 grams: item.grams,
                                 calories: item.calories,

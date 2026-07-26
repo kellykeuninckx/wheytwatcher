@@ -29,124 +29,126 @@ struct CopyProductsEntryView: View {
 
                 DumbbellPatternBackground()
 
-                List {
+                ScrollView {
 
-                    if products.isEmpty {
+                    LazyVStack(spacing: 16) {
 
-                        WWPlaceholderCard(
-                            icon: "doc.on.doc",
-                            color: .wwOrange,
-                            title: "Nog geen producten",
-                            message: "Log eerst een product, dan kan je het hier terugvinden om te kopiëren."
-                        )
-                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                        if products.isEmpty {
 
-                    } else {
+                            WWPlaceholderCard(
+                                icon: "doc.on.doc",
+                                color: .wwOrange,
+                                title: "Nog geen producten",
+                                message: "Log eerst een product, dan kan je het hier terugvinden om te kopiëren."
+                            )
 
-                        Text("Recente producten")
-                            .font(.caption.bold())
-                            .foregroundStyle(Color.wwSecondaryText)
-                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 2, trailing: 16))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
+                        } else {
 
-                        ForEach(Array(products.enumerated()), id: \.element.id) { index, entry in
+                            Text("Recente producten")
+                                .font(.caption.bold())
+                                .foregroundStyle(Color.wwSecondaryText)
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
-                            VStack(alignment: .leading, spacing: 10) {
+                            ForEach(Array(products.enumerated()), id: \.element.id) { index, entry in
 
-                                Button {
-                                    selections[index].isSelected.toggle()
-                                } label: {
-                                    HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 10) {
 
-                                        Image(systemName: selections[index].isSelected ? "checkmark.circle.fill" : "circle")
-                                            .foregroundStyle(selections[index].isSelected ? Color.wwTeal : Color.wwSecondaryText)
+                                    Button {
+                                        selections[index].isSelected.toggle()
+                                    } label: {
+                                        HStack(spacing: 12) {
 
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(entry.name)
-                                                .font(.subheadline.bold())
-                                                .foregroundStyle(Color.wwDarkAccent)
+                                            Image(systemName: selections[index].isSelected ? "checkmark.circle.fill" : "circle")
+                                                .foregroundStyle(selections[index].isSelected ? Color.wwTeal : Color.wwSecondaryText)
 
-                                            Text("laatst: \(entry.grams.roundedInt) g • \(entry.calories.roundedInt) kcal")
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(entry.name)
+                                                    .font(.subheadline.bold())
+                                                    .foregroundStyle(Color.wwDarkAccent)
+
+                                                Text("laatst: \(entry.grams.roundedInt) g • \(entry.calories.roundedInt) kcal")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(Color.wwTertiaryText)
+                                            }
+
+                                            Spacer()
+
+                                            Text(entry.date, format: .dateTime.day().month(.abbreviated))
                                                 .font(.caption2)
-                                                .foregroundStyle(Color.wwTertiaryText)
-                                        }
-
-                                        Spacer()
-
-                                        Text(entry.date, format: .dateTime.day().month(.abbreviated))
-                                            .font(.caption2)
-                                            .foregroundStyle(Color.wwSecondaryText)
-
-                                    }
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-
-                                if selections[index].isSelected {
-
-                                    HStack(spacing: 16) {
-
-                                        HStack(spacing: 6) {
-                                            Text("Gram")
-                                                .font(.caption)
                                                 .foregroundStyle(Color.wwSecondaryText)
 
-                                            TextField("gram", text: $selections[index].gramsText)
-                                                .keyboardType(.decimalPad)
-                                                .multilineTextAlignment(.trailing)
+                                        }
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    if selections[index].isSelected {
+
+                                        HStack(spacing: 16) {
+
+                                            HStack(spacing: 6) {
+                                                Text("Gram")
+                                                    .font(.caption)
+                                                    .foregroundStyle(Color.wwSecondaryText)
+
+                                                SelectAllTextField(
+                                                    text: $selections[index].gramsText,
+                                                    keyboardType: .decimalPad,
+                                                    textColor: UIColor(Color.wwDarkAccent)
+                                                )
                                                 .frame(width: 56)
-                                                .foregroundStyle(Color.wwDarkAccent)
-                                        }
+                                            }
 
-                                        Spacer()
+                                            Spacer()
 
-                                        Menu {
-                                            ForEach(MealCategory.allCases) { cat in
-                                                Button(cat.rawValue) {
-                                                    selections[index].category = cat
+                                            Menu {
+                                                ForEach(MealCategory.allCases) { cat in
+                                                    Button(cat.rawValue) {
+                                                        selections[index].category = cat
+                                                    }
                                                 }
+                                            } label: {
+                                                HStack(spacing: 4) {
+                                                    Text(selections[index].category.rawValue)
+                                                    Image(systemName: "chevron.down")
+                                                }
+                                                .font(.caption.bold())
+                                                .foregroundStyle(Color.wwOrange)
                                             }
-                                        } label: {
-                                            HStack(spacing: 4) {
-                                                Text(selections[index].category.rawValue)
-                                                Image(systemName: "chevron.down")
-                                            }
-                                            .font(.caption.bold())
-                                            .foregroundStyle(Color.wwOrange)
+
                                         }
+                                        .padding(.leading, 32)
 
                                     }
-                                    .padding(.leading, 32)
 
                                 }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .wwCard()
 
                             }
-                            .cardRow()
 
                         }
 
-                    }
-
-                    NavigationLink {
-                        CopyMealsView(onFinished: { dismiss() })
-                    } label: {
-                        HStack {
-                            Text("Bekijk een specifieke dag")
-                                .font(.subheadline.bold())
-                                .foregroundStyle(Color.wwTeal)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundStyle(Color.wwTeal)
+                        NavigationLink {
+                            CopyMealsView(onFinished: { dismiss() })
+                        } label: {
+                            HStack {
+                                Text("Bekijk een specifieke dag")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(Color.wwTeal)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundStyle(Color.wwTeal)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .wwCard()
                         }
+                        .buttonStyle(.plain)
+
                     }
-                    .cardRow()
+                    .padding(16)
 
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
 
             }
             .tint(Color.wwOrange)
@@ -476,80 +478,85 @@ struct CopyMealDetailView: View {
 
             DumbbellPatternBackground()
 
-            List {
-                ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+            ScrollView {
 
-                    VStack(alignment: .leading, spacing: 10) {
+                LazyVStack(spacing: 16) {
 
-                        Button {
-                            selections[index].isSelected.toggle()
-                        } label: {
-                            HStack(spacing: 12) {
+                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
 
-                                Image(systemName: selections[index].isSelected ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(selections[index].isSelected ? Color.wwTeal : Color.wwSecondaryText)
+                        VStack(alignment: .leading, spacing: 10) {
 
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(entry.name)
-                                        .font(.subheadline.bold())
-                                        .foregroundStyle(Color.wwDarkAccent)
+                            Button {
+                                selections[index].isSelected.toggle()
+                            } label: {
+                                HStack(spacing: 12) {
 
-                                    Text("origineel: \(entry.grams.roundedInt) g • \(entry.calories.roundedInt) kcal")
-                                        .font(.caption2)
-                                        .foregroundStyle(Color.wwTertiaryText)
+                                    Image(systemName: selections[index].isSelected ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(selections[index].isSelected ? Color.wwTeal : Color.wwSecondaryText)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(entry.name)
+                                            .font(.subheadline.bold())
+                                            .foregroundStyle(Color.wwDarkAccent)
+
+                                        Text("origineel: \(entry.grams.roundedInt) g • \(entry.calories.roundedInt) kcal")
+                                            .font(.caption2)
+                                            .foregroundStyle(Color.wwTertiaryText)
+                                    }
+
+                                    Spacer()
+
                                 }
-
-                                Spacer()
-
+                                .contentShape(Rectangle())
                             }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
+                            .buttonStyle(.plain)
 
-                        if selections[index].isSelected {
+                            if selections[index].isSelected {
 
-                            HStack(spacing: 16) {
+                                HStack(spacing: 16) {
 
-                                HStack(spacing: 6) {
-                                    Text("Gram")
-                                        .font(.caption)
-                                        .foregroundStyle(Color.wwSecondaryText)
+                                    HStack(spacing: 6) {
+                                        Text("Gram")
+                                            .font(.caption)
+                                            .foregroundStyle(Color.wwSecondaryText)
 
-                                    TextField("gram", text: $selections[index].gramsText)
-                                        .keyboardType(.decimalPad)
-                                        .multilineTextAlignment(.trailing)
+                                        SelectAllTextField(
+                                            text: $selections[index].gramsText,
+                                            keyboardType: .decimalPad,
+                                            textColor: UIColor(Color.wwDarkAccent)
+                                        )
                                         .frame(width: 56)
-                                        .foregroundStyle(Color.wwDarkAccent)
-                                }
+                                    }
 
-                                Spacer()
+                                    Spacer()
 
-                                Menu {
-                                    ForEach(MealCategory.allCases) { category in
-                                        Button(category.rawValue) {
-                                            selections[index].category = category
+                                    Menu {
+                                        ForEach(MealCategory.allCases) { category in
+                                            Button(category.rawValue) {
+                                                selections[index].category = category
+                                            }
                                         }
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            Text(selections[index].category.rawValue)
+                                            Image(systemName: "chevron.down")
+                                        }
+                                        .font(.caption.bold())
+                                        .foregroundStyle(Color.wwOrange)
                                     }
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Text(selections[index].category.rawValue)
-                                        Image(systemName: "chevron.down")
-                                    }
-                                    .font(.caption.bold())
-                                    .foregroundStyle(Color.wwOrange)
+
                                 }
+                                .padding(.leading, 32)
 
                             }
-                            .padding(.leading, 32)
 
                         }
-
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .wwCard()
                     }
-                    .cardRow()
                 }
+                .padding(16)
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
 
         }
         .navigationTitle(meal.rawValue)

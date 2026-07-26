@@ -40,10 +40,12 @@ struct AddWeightView: View {
                             Text("Vandaag")
                                 .foregroundStyle(Color.wwDarkAccent)
                             Spacer()
-                            TextField("kg", text: $weightKgText)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .foregroundStyle(Color.wwDarkAccent)
+                            SelectAllTextField(
+                                text: $weightKgText,
+                                keyboardType: .decimalPad,
+                                textColor: UIColor(Color.wwDarkAccent)
+                            )
+                            .frame(width: 70)
                             Text("kg")
                                 .foregroundStyle(Color.wwSecondaryText)
                         }
@@ -52,9 +54,13 @@ struct AddWeightView: View {
 
                     Section("Vetpercentage (optioneel)") {
                         HStack {
-                            TextField("bv. 18", text: $bodyFatText)
-                                .keyboardType(.decimalPad)
-                                .foregroundStyle(Color.wwDarkAccent)
+                            SelectAllTextField(
+                                text: $bodyFatText,
+                                placeholder: "bv. 18",
+                                keyboardType: .decimalPad,
+                                textAlignment: .left,
+                                textColor: UIColor(Color.wwDarkAccent)
+                            )
                             Text("%")
                                 .foregroundStyle(Color.wwSecondaryText)
                         }
@@ -66,46 +72,61 @@ struct AddWeightView: View {
                         HStack {
                             Text("Taille").foregroundStyle(Color.wwDarkAccent)
                             Spacer()
-                            TextField("cm", text: $waistText)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .foregroundStyle(Color.wwDarkAccent)
+                            SelectAllTextField(
+                                text: $waistText,
+                                placeholder: "cm",
+                                keyboardType: .decimalPad,
+                                textColor: UIColor(Color.wwDarkAccent)
+                            )
+                            .frame(width: 70)
                         }
 
                         HStack {
                             Text("Borst").foregroundStyle(Color.wwDarkAccent)
                             Spacer()
-                            TextField("cm", text: $chestText)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .foregroundStyle(Color.wwDarkAccent)
+                            SelectAllTextField(
+                                text: $chestText,
+                                placeholder: "cm",
+                                keyboardType: .decimalPad,
+                                textColor: UIColor(Color.wwDarkAccent)
+                            )
+                            .frame(width: 70)
                         }
 
                         HStack {
                             Text("Heupen").foregroundStyle(Color.wwDarkAccent)
                             Spacer()
-                            TextField("cm", text: $hipsText)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .foregroundStyle(Color.wwDarkAccent)
+                            SelectAllTextField(
+                                text: $hipsText,
+                                placeholder: "cm",
+                                keyboardType: .decimalPad,
+                                textColor: UIColor(Color.wwDarkAccent)
+                            )
+                            .frame(width: 70)
                         }
 
                         HStack {
                             Text("Arm").foregroundStyle(Color.wwDarkAccent)
                             Spacer()
-                            TextField("cm", text: $armText)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .foregroundStyle(Color.wwDarkAccent)
+                            SelectAllTextField(
+                                text: $armText,
+                                placeholder: "cm",
+                                keyboardType: .decimalPad,
+                                textColor: UIColor(Color.wwDarkAccent)
+                            )
+                            .frame(width: 70)
                         }
 
                         HStack {
                             Text("Dijbeen").foregroundStyle(Color.wwDarkAccent)
                             Spacer()
-                            TextField("cm", text: $thighText)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .foregroundStyle(Color.wwDarkAccent)
+                            SelectAllTextField(
+                                text: $thighText,
+                                placeholder: "cm",
+                                keyboardType: .decimalPad,
+                                textColor: UIColor(Color.wwDarkAccent)
+                            )
+                            .frame(width: 70)
                         }
 
                     }

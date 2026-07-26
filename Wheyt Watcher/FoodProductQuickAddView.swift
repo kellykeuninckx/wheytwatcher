@@ -47,9 +47,12 @@ struct FoodProductQuickAddView: View {
                     Section("Hoeveelheid") {
 
                         HStack {
-                            TextField("Gram", text: $gramsText)
-                                .keyboardType(.decimalPad)
-                                .foregroundStyle(Color.wwDarkAccent)
+                            SelectAllTextField(
+                                text: $gramsText,
+                                keyboardType: .decimalPad,
+                                textAlignment: .left,
+                                textColor: UIColor(Color.wwDarkAccent)
+                            )
 
                             Text("g")
                                 .foregroundStyle(Color.wwSecondaryText)

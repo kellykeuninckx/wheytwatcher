@@ -57,10 +57,13 @@ struct AddFoodView: View {
                             Text("Hoeveelheid")
                                 .foregroundStyle(Color.wwDarkAccent)
                             Spacer()
-                            TextField("gram", text: $gramsText)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .foregroundStyle(Color.wwDarkAccent)
+                            SelectAllTextField(
+                                text: $gramsText,
+                                placeholder: "gram",
+                                keyboardType: .decimalPad,
+                                textColor: UIColor(Color.wwDarkAccent)
+                            )
+                            .frame(width: 70)
                             Text("g")
                                 .foregroundStyle(Color.wwSecondaryText)
                         }
@@ -125,10 +128,13 @@ struct AddFoodView: View {
             Text(title)
                 .foregroundStyle(Color.wwDarkAccent)
             Spacer()
-            TextField(title, text: text)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .foregroundStyle(Color.wwDarkAccent)
+            SelectAllTextField(
+                text: text,
+                placeholder: title,
+                keyboardType: .decimalPad,
+                textColor: UIColor(Color.wwDarkAccent)
+            )
+            .frame(width: 70)
             Text(unit)
                 .foregroundStyle(Color.wwSecondaryText)
         }

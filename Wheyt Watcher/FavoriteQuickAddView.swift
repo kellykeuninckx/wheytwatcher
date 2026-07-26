@@ -7,13 +7,15 @@ struct FavoriteQuickAddView: View {
     @Environment(\.modelContext) private var modelContext
 
     let favorite: FavoriteFood
+    let onAdded: () -> Void
 
-    @State private var grams: Double
+    @State private var gramsText: String
     @State private var meal: MealCategory = .breakfast
 
-    init(favorite: FavoriteFood) {
+    init(favorite: FavoriteFood, onAdded: @escaping () -> Void) {
         self.favorite = favorite
-        _grams = State(initialValue: favorite.grams)
+        self.onAdded = onAdded
+        _gramsText = State(initialValue: String(favorite.grams.roundedInt))
     }
 
     var body: some View {
@@ -37,7 +39,7 @@ struct FavoriteQuickAddView: View {
                     Section("Hoeveelheid") {
 
                         HStack {
-                            TextField("Gram", value: $grams, format: .number)
+                            TextField("Gram", text: $gramsText)
                                 .keyboardType(.decimalPad)
                                 .foregroundStyle(Color.wwDarkAccent)
 
@@ -78,7 +80,8 @@ struct FavoriteQuickAddView: View {
 
                     Button("Toevoegen") {
 
-                        let factor = grams / favorite.grams
+                        let grams = Double(gramsText.replacingOccurrences(of: ",", with: ".")) ?? favorite.grams
+                        let factor = favorite.grams > 0 ? grams / favorite.grams : 1
 
                         let entry = FoodLogEntry(
                             date: Date(),
@@ -96,6 +99,7 @@ struct FavoriteQuickAddView: View {
                         try? modelContext.save()
 
                         dismiss()
+                        onAdded()
 
                     }
 

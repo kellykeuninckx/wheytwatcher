@@ -9,7 +9,7 @@ struct AddWeightView: View {
 
     let profile: UserProfile
 
-    @State private var weightKg: Double
+    @State private var weightKgText: String
     @State private var bodyFatText: String
     @State private var activityLevel: ActivityLevel
 
@@ -21,7 +21,7 @@ struct AddWeightView: View {
 
     init(profile: UserProfile) {
         self.profile = profile
-        _weightKg = State(initialValue: profile.currentWeightKg)
+        _weightKgText = State(initialValue: String(profile.currentWeightKg))
         _bodyFatText = State(
             initialValue: profile.estimatedBodyFatPercentage.map { String($0) } ?? ""
         )
@@ -40,7 +40,7 @@ struct AddWeightView: View {
                             Text("Vandaag")
                                 .foregroundStyle(Color.wwDarkAccent)
                             Spacer()
-                            TextField("kg", value: $weightKg, format: .number)
+                            TextField("kg", text: $weightKgText)
                                 .keyboardType(.decimalPad)
                                 .multilineTextAlignment(.trailing)
                                 .foregroundStyle(Color.wwDarkAccent)
@@ -154,6 +154,7 @@ struct AddWeightView: View {
     }
 
     private func save() {
+        let weightKg = Double(weightKgText.replacingOccurrences(of: ",", with: ".")) ?? profile.currentWeightKg
         profile.currentWeightKg = weightKg
         profile.activityLevel = activityLevel
 

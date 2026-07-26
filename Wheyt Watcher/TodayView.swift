@@ -233,27 +233,27 @@ struct TodayView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .tint(Color.wwTeal)
-            .sheet(isPresented: $showingAddFood) {
+            .sheet(isPresented: $showingAddFood, onDismiss: { showingQuickAddMenu = false }) {
                 AddFoodView()
-            }.sheet(isPresented: $showingCopyMeal) {
+            }.sheet(isPresented: $showingCopyMeal, onDismiss: { showingQuickAddMenu = false }) {
                 CopyProductsEntryView()
             }
 
-            .sheet(isPresented: $showingFavorites) {
+            .sheet(isPresented: $showingFavorites, onDismiss: { showingQuickAddMenu = false }) {
                 FavoritesView()
             }
 
-            .sheet(isPresented: $showingMeals) {
+            .sheet(isPresented: $showingMeals, onDismiss: { showingQuickAddMenu = false }) {
                 MealsView()
             }
 
-            .sheet(isPresented: $showingBarcodeScanner) {
+            .sheet(isPresented: $showingBarcodeScanner, onDismiss: { showingQuickAddMenu = false }) {
                 BarcodeScannerView()
             }
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
             }
-            .sheet(isPresented: $showingFoodSearch) {
+            .sheet(isPresented: $showingFoodSearch, onDismiss: { showingQuickAddMenu = false }) {
                 FoodSearchView()
             }
             .sheet(isPresented: $showingLogbook) {
@@ -262,7 +262,7 @@ struct TodayView: View {
             .sheet(isPresented: $showingAddTraining) {
                 AddTrainingView(profile: profile)
             }
-            .sheet(isPresented: $showingAddWeight) {
+            .sheet(isPresented: $showingAddWeight, onDismiss: { showingQuickAddMenu = false }) {
                 AddWeightView(profile: profile)
             }
             .sheet(isPresented: $showingProfile) {

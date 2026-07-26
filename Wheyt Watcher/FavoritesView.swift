@@ -2,10 +2,11 @@ import SwiftUI
 import SwiftData
 
 struct FavoritesView: View {
-    
+
     @Query private var favorites: [FavoriteFood]
     @Environment(\.modelContext) private var modelContext
-    
+    @Environment(\.dismiss) private var dismiss
+
     @State private var selectedFavorite: FavoriteFood?
     
     var body: some View {
@@ -80,9 +81,9 @@ struct FavoritesView: View {
                 
             }
             .sheet(item: $selectedFavorite) { favorite in
-                
-                FavoriteQuickAddView(favorite: favorite)
-                
+
+                FavoriteQuickAddView(favorite: favorite, onAdded: { dismiss() })
+
             }
             
         }

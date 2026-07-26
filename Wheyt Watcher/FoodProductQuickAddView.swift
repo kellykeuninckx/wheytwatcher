@@ -9,8 +9,12 @@ struct FoodProductQuickAddView: View {
     let product: FoodProduct
     var onLogged: (() -> Void)? = nil
 
-    @State private var grams: Double = 100
+    @State private var gramsText: String = "100"
     @State private var meal: MealCategory = .breakfast
+
+    private var grams: Double {
+        Double(gramsText.replacingOccurrences(of: ",", with: ".")) ?? 100
+    }
 
     private var factor: Double {
         grams / 100.0
@@ -43,7 +47,7 @@ struct FoodProductQuickAddView: View {
                     Section("Hoeveelheid") {
 
                         HStack {
-                            TextField("Gram", value: $grams, format: .number)
+                            TextField("Gram", text: $gramsText)
                                 .keyboardType(.decimalPad)
                                 .foregroundStyle(Color.wwDarkAccent)
 

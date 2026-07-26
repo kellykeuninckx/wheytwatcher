@@ -9,13 +9,32 @@ struct AddFoodView: View {
 
     @State private var name = ""
     @State private var mealCategory: MealCategory = .breakfast
-    @State private var grams = 100.0
-    @State private var caloriesPer100g = 0.0
-    @State private var proteinPer100g = 0.0
-    @State private var carbsPer100g = 0.0
-    @State private var fatPer100g = 0.0
-    @State private var fiberPer100g = 0.0
+    @State private var gramsText = "100"
+    @State private var caloriesPer100gText = ""
+    @State private var proteinPer100gText = ""
+    @State private var carbsPer100gText = ""
+    @State private var fatPer100gText = ""
+    @State private var fiberPer100gText = ""
     @State private var note = ""
+
+    private var grams: Double {
+        Double(gramsText.replacingOccurrences(of: ",", with: ".")) ?? 100
+    }
+    private var caloriesPer100g: Double {
+        Double(caloriesPer100gText.replacingOccurrences(of: ",", with: ".")) ?? 0
+    }
+    private var proteinPer100g: Double {
+        Double(proteinPer100gText.replacingOccurrences(of: ",", with: ".")) ?? 0
+    }
+    private var carbsPer100g: Double {
+        Double(carbsPer100gText.replacingOccurrences(of: ",", with: ".")) ?? 0
+    }
+    private var fatPer100g: Double {
+        Double(fatPer100gText.replacingOccurrences(of: ",", with: ".")) ?? 0
+    }
+    private var fiberPer100g: Double {
+        Double(fiberPer100gText.replacingOccurrences(of: ",", with: ".")) ?? 0
+    }
 
     var body: some View {
         NavigationStack {
@@ -38,7 +57,7 @@ struct AddFoodView: View {
                             Text("Hoeveelheid")
                                 .foregroundStyle(Color.wwDarkAccent)
                             Spacer()
-                            TextField("gram", value: $grams, format: .number)
+                            TextField("gram", text: $gramsText)
                                 .keyboardType(.decimalPad)
                                 .multilineTextAlignment(.trailing)
                                 .foregroundStyle(Color.wwDarkAccent)
@@ -55,11 +74,11 @@ struct AddFoodView: View {
                     .listRowBackground(Color.wwCardBackground)
 
                     Section("Per 100 gram") {
-                        numberField("Calorieën", value: $caloriesPer100g, unit: "kcal")
-                        numberField("Eiwit", value: $proteinPer100g, unit: "g")
-                        numberField("Koolhydraten", value: $carbsPer100g, unit: "g")
-                        numberField("Vet", value: $fatPer100g, unit: "g")
-                        numberField("Vezels", value: $fiberPer100g, unit: "g")
+                        numberField("Calorieën", text: $caloriesPer100gText, unit: "kcal")
+                        numberField("Eiwit", text: $proteinPer100gText, unit: "g")
+                        numberField("Koolhydraten", text: $carbsPer100gText, unit: "g")
+                        numberField("Vet", text: $fatPer100gText, unit: "g")
+                        numberField("Vezels", text: $fiberPer100gText, unit: "g")
                     }
                     .listRowBackground(Color.wwCardBackground)
 
@@ -101,12 +120,12 @@ struct AddFoodView: View {
         }
     }
 
-    private func numberField(_ title: String, value: Binding<Double>, unit: String) -> some View {
+    private func numberField(_ title: String, text: Binding<String>, unit: String) -> some View {
         HStack {
             Text(title)
                 .foregroundStyle(Color.wwDarkAccent)
             Spacer()
-            TextField(title, value: value, format: .number)
+            TextField(title, text: text)
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .foregroundStyle(Color.wwDarkAccent)

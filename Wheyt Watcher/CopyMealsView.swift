@@ -29,9 +29,11 @@ struct CopyProductsEntryView: View {
 
                 DumbbellPatternBackground()
 
+                ScrollViewReader { proxy in
+
                 ScrollView {
 
-                    LazyVStack(spacing: 16) {
+                    VStack(spacing: 16) {
 
                         if products.isEmpty {
 
@@ -94,7 +96,15 @@ struct CopyProductsEntryView: View {
                                                 SelectAllTextField(
                                                     text: $selections[index].gramsText,
                                                     keyboardType: .decimalPad,
-                                                    textColor: UIColor(Color.wwDarkAccent)
+                                                    textColor: UIColor(Color.wwDarkAccent),
+                                                    onFocusChange: { isFocused in
+                                                        guard isFocused else { return }
+                                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                                            withAnimation {
+                                                                proxy.scrollTo(entry.id, anchor: .center)
+                                                            }
+                                                        }
+                                                    }
                                                 )
                                                 .frame(width: 56)
                                             }
@@ -124,6 +134,7 @@ struct CopyProductsEntryView: View {
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .wwCard()
+                                .id(entry.id)
 
                             }
 
@@ -147,6 +158,8 @@ struct CopyProductsEntryView: View {
 
                     }
                     .padding(16)
+
+                }
 
                 }
 

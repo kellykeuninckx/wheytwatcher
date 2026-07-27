@@ -3,6 +3,8 @@ import SwiftData
 
 struct FavoritesView: View {
 
+    var onAdded: () -> Void = {}
+
     @Query private var favorites: [FavoriteFood]
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -82,7 +84,10 @@ struct FavoritesView: View {
             }
             .sheet(item: $selectedFavorite) { favorite in
 
-                FavoriteQuickAddView(favorite: favorite, onAdded: { dismiss() })
+                FavoriteQuickAddView(favorite: favorite, onAdded: {
+                    dismiss()
+                    onAdded()
+                })
 
             }
             

@@ -600,7 +600,8 @@ struct ProgressViewScreen: View {
         ForEach(filteredWeights) { log in
             LineMark(
                 x: .value("Datum", log.date, unit: .day),
-                y: .value("Gewicht", log.weightKg)
+                y: .value("Gewicht", log.weightKg),
+                series: .value("Serie", "Gewicht")
             )
             .foregroundStyle(Color.wwTeal)
             .symbol(.circle)
@@ -609,7 +610,8 @@ struct ProgressViewScreen: View {
         ForEach(weightTrendPoints, id: \.date) { point in
             LineMark(
                 x: .value("Datum", point.date, unit: .day),
-                y: .value("Trend", point.value)
+                y: .value("Trend", point.value),
+                series: .value("Serie", "Trend")
             )
             .foregroundStyle(Color.wwTeal.opacity(0.6))
             .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
@@ -747,7 +749,8 @@ struct ProgressViewScreen: View {
         ForEach(dailyProtein.sorted(by: { $0.key < $1.key }), id: \.key) { day, protein in
             LineMark(
                 x: .value("Datum", day, unit: .day),
-                y: .value("Eiwit", protein)
+                y: .value("Eiwit", protein),
+                series: .value("Serie", "Eiwit")
             )
             .foregroundStyle(Color.wwTeal)
             .symbol(.circle)
@@ -756,7 +759,8 @@ struct ProgressViewScreen: View {
         ForEach(dailyTargetProtein.sorted(by: { $0.key < $1.key }), id: \.key) { day, target in
             LineMark(
                 x: .value("Datum", day, unit: .day),
-                y: .value("Doel", target)
+                y: .value("Doel", target),
+                series: .value("Serie", "Doel")
             )
             .foregroundStyle(Color.wwPurple.opacity(0.6))
             .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))

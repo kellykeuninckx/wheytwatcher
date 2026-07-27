@@ -13,6 +13,7 @@ struct SelectAllTextField: UIViewRepresentable {
     var textAlignment: NSTextAlignment = .right
     var textColor: UIColor = .label
     var font: UIFont = .preferredFont(forTextStyle: .body)
+    var onFocusChange: ((Bool) -> Void)? = nil
 
     func makeUIView(context: Context) -> UITextField {
         let textField = UITextField()
@@ -43,14 +44,16 @@ struct SelectAllTextField: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text)
+        Coordinator(text: $text, onFocusChange: onFocusChange)
     }
 
     final class Coordinator: NSObject, UITextFieldDelegate {
         var text: Binding<String>
+        var onFocusChange: ((Bool) -> Void)?
 
-        init(text: Binding<String>) {
+        init(text: Binding<String>, onFocusChange: ((Bool) -> Void)?) {
             self.text = text
+            self.onFocusChange = onFocusChange
         }
 
         @objc func textChanged(_ sender: UITextField) {
@@ -61,6 +64,11 @@ struct SelectAllTextField: UIViewRepresentable {
             DispatchQueue.main.async {
                 textField.selectAll(nil)
             }
+            onFocusChange?(true)
+        }
+
+        func textFieldDidEndEditing(_ textField: UITextField) {
+            onFocusChange?(false)
         }
     }
 

@@ -1,30 +1,28 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:whey_mate/data/database.dart';
 import 'package:whey_mate/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Vandaag-scherm rendert met een geseed profiel', (WidgetTester tester) async {
+    final db = AppDatabase.forTesting();
+    await tester.pumpWidget(WheyMateApp(db: db));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Profiel-seed + eerste DB-round trip zijn async.
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    expect(find.textContaining('Jij'), findsOneWidget);
+    expect(find.text('Calorieën'), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // "Training" staat verderop in de ListView, buiten het startviewport.
+    await tester.dragUntilVisible(
+      find.text('Training'),
+      find.byType(ListView),
+      const Offset(0, -100),
+    );
+    expect(find.text('Training'), findsOneWidget);
+
+    await db.close();
   });
 }

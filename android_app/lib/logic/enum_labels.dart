@@ -1,0 +1,83 @@
+import 'package:flutter/material.dart';
+
+import '../data/database.dart';
+
+/// Dutch display labels, mirroring the Swift enum rawValues.
+extension TrainingTypeLabel on TrainingType {
+  String get label {
+    switch (this) {
+      case TrainingType.heavyStrength:
+        return 'Kracht zwaar';
+      case TrainingType.hypertrophy:
+        return 'Kracht hypertrofie';
+      case TrainingType.hyrox:
+        return 'Hyrox / conditioning';
+      case TrainingType.gymnastics:
+        return 'Gymnastics / skill';
+      case TrainingType.running:
+        return 'Hardlopen';
+      case TrainingType.walking:
+        return 'Wandelen';
+      case TrainingType.boxing:
+        return 'Boksen';
+      case TrainingType.swimming:
+        return 'Zwemmen';
+      case TrainingType.crossfit:
+        return 'CrossFit';
+      case TrainingType.cycling:
+        return 'Fietsen';
+      case TrainingType.yoga:
+        return 'Yoga / Pilates';
+      case TrainingType.racketSports:
+        return 'Tennis / Padel';
+      case TrainingType.rowing:
+        return 'Roeien';
+      case TrainingType.other:
+        return 'Overig';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case TrainingType.heavyStrength:
+      case TrainingType.hypertrophy:
+        return Icons.fitness_center;
+      case TrainingType.hyrox:
+      case TrainingType.crossfit:
+        return Icons.bolt;
+      case TrainingType.gymnastics:
+        return Icons.sports_gymnastics;
+      case TrainingType.running:
+        return Icons.directions_run;
+      case TrainingType.walking:
+        return Icons.directions_walk;
+      case TrainingType.boxing:
+        return Icons.sports_mma;
+      case TrainingType.swimming:
+        return Icons.pool;
+      case TrainingType.cycling:
+        return Icons.directions_bike;
+      case TrainingType.yoga:
+        return Icons.self_improvement;
+      case TrainingType.racketSports:
+        return Icons.sports_tennis;
+      case TrainingType.rowing:
+        return Icons.rowing;
+      case TrainingType.other:
+        return Icons.sports;
+    }
+  }
+}
+
+extension GoalModeLabel on GoalMode {
+  String get label {
+    switch (this) {
+      case GoalMode.cut:
+        return 'Cut';
+      case GoalMode.maintenance:
+        return 'Onderhoud';
+      case GoalMode.bulk:
+        return 'Bulk';
+    }
+  }
+}

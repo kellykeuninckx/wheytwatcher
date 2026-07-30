@@ -81,3 +81,42 @@ extension GoalModeLabel on GoalMode {
     }
   }
 }
+
+extension SexLabel on Sex {
+  String get label {
+    switch (this) {
+      case Sex.male:
+        return 'Man';
+      case Sex.female:
+        return 'Vrouw';
+    }
+  }
+}
+
+extension GoalPaceLabel on GoalPace {
+  String get label {
+    switch (this) {
+      case GoalPace.conservative:
+        return 'Voorzichtig';
+      case GoalPace.normal:
+        return 'Normaal';
+      case GoalPace.aggressive:
+        return 'Agressief';
+    }
+  }
+}
+
+extension ActivityLevelLabel on ActivityLevel {
+  String get label {
+    switch (this) {
+      case ActivityLevel.sedentary:
+        return 'Zittend';
+      case ActivityLevel.light:
+        return 'Licht actief';
+      case ActivityLevel.moderate:
+        return 'Redelijk actief';
+      case ActivityLevel.active:
+        return 'Actief';
+    }
+  }
+}

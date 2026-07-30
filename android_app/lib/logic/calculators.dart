@@ -122,6 +122,90 @@ class MacroCalculator {
   }
 }
 
+/// Poort van `GoalDurationAdvisor` — geadviseerde duur per doel/tempo, met onderbouwing.
+class GoalDurationAdvisor {
+  GoalDurationAdvisor._();
+
+  static int recommendedWeeks(GoalMode mode, GoalPace pace) {
+    switch (mode) {
+      case GoalMode.maintenance:
+        return 12;
+      case GoalMode.cut:
+        switch (pace) {
+          case GoalPace.conservative:
+            return 12;
+          case GoalPace.normal:
+            return 8;
+          case GoalPace.aggressive:
+            return 6;
+        }
+      case GoalMode.bulk:
+        switch (pace) {
+          case GoalPace.conservative:
+            return 16;
+          case GoalPace.normal:
+            return 12;
+          case GoalPace.aggressive:
+            return 8;
+        }
+    }
+  }
+
+  static String adviceText(GoalMode mode, GoalPace pace) {
+    switch (mode) {
+      case GoalMode.maintenance:
+        return 'Bij onderhoud houden we standaard 12 weken aan. Zo verzamelt de app genoeg data om je trend te tonen, en evalueren we daarna of je wil bijsturen.';
+      case GoalMode.cut:
+        switch (pace) {
+          case GoalPace.conservative:
+            return 'Een voorzichtige cut duurt meestal 10–12 weken. Het kleinere calorietekort beschermt je spiermassa beter, maar vraagt meer geduld.';
+          case GoalPace.normal:
+            return 'Een normale cut duurt meestal 8 weken — voor de meeste mensen een goede balans tussen tempo en het behouden van spiermassa.';
+          case GoalPace.aggressive:
+            return 'Een agressieve cut duurt meestal 6 weken. Door het grotere tekort gaat het sneller, maar we raden af dit langer vol te houden: het risico op spierverlies en terugval neemt toe.';
+        }
+      case GoalMode.bulk:
+        switch (pace) {
+          case GoalPace.conservative:
+            return 'Een voorzichtige bulk duurt meestal 14–16 weken. Langzaam aankomen beperkt vetopslag, maar kost meer tijd.';
+          case GoalPace.normal:
+            return 'Een normale bulk duurt meestal 10–12 weken — een gangbare balans tussen spiergroei en vetopslag.';
+          case GoalPace.aggressive:
+            return 'Een agressieve bulk duurt meestal 8 weken. Je komt sneller aan, maar met meer kans op overtollig vet — hou dit kort en evalueer daarna opnieuw.';
+        }
+    }
+  }
+
+  /// Puur informatief: gegeven een doelgewicht en gekozen duur, wat voor tempo impliceert dat?
+  static String? impliedPaceDescription({
+    required double currentWeightKg,
+    required double targetWeightKg,
+    required int durationWeeks,
+  }) {
+    if (durationWeeks <= 0 || currentWeightKg <= 0) return null;
+
+    final totalChange = (targetWeightKg - currentWeightKg).abs();
+    if (totalChange <= 0.1) return null;
+
+    final weeklyRateKg = totalChange / durationWeeks;
+    final weeklyRatePercent = (weeklyRateKg / currentWeightKg) * 100;
+
+    final String paceLabel;
+    if (weeklyRatePercent < 0.4) {
+      paceLabel = 'een voorzichtig tempo';
+    } else if (weeklyRatePercent < 0.75) {
+      paceLabel = 'een gemiddeld tempo';
+    } else {
+      paceLabel = 'een agressief tempo';
+    }
+
+    final roundedRate = (weeklyRateKg * 10).round() / 10;
+    final verb = targetWeightKg < currentWeightKg ? 'afvallen' : 'aankomen';
+
+    return 'Dat komt neer op ongeveer $roundedRate kg per week $verb — dat valt onder $paceLabel.';
+  }
+}
+
 class TrainingCalculator {
   TrainingCalculator._();
 

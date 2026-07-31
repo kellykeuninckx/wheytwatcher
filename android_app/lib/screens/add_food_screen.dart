@@ -15,10 +15,16 @@ double? _parseDutch(String text) {
 /// Poort van `AddFoodView.swift`: handmatig een voedingslogregel toevoegen
 /// door macro's per 100 gram in te vullen.
 class AddFoodScreen extends StatefulWidget {
-  const AddFoodScreen({super.key, required this.db, required this.isDark});
+  const AddFoodScreen({super.key, required this.db, required this.isDark, this.prefilledBarcode});
 
   final AppDatabase db;
   final bool isDark;
+
+  /// Als dit scherm vanuit de barcode-scanner is geopend voor een product dat
+  /// niet in Open Food Facts stond: koppelt de handmatige invoer aan deze
+  /// barcode, zodat een volgende scan 'm meteen herkent (poort van
+  /// `AddFoodView.swift`'s `prefilledBarcode`).
+  final String? prefilledBarcode;
 
   @override
   State<AddFoodScreen> createState() => _AddFoodScreenState();
@@ -65,11 +71,13 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     setState(() => _saving = true);
     final note = _noteController.text.trim();
 
+    final name = _nameController.text.trim();
+
     await widget.db.into(widget.db.foodLogEntries).insert(
           FoodLogEntriesCompanion.insert(
             date: DateTime.now(),
             mealCategory: _mealCategory,
-            name: _nameController.text.trim(),
+            name: name,
             grams: _grams,
             calories: _scaled(_caloriesPer100g),
             proteinGrams: _scaled(_proteinPer100g),
@@ -79,6 +87,22 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
             note: Value(note.isEmpty ? null : note),
           ),
         );
+
+    final barcode = widget.prefilledBarcode;
+    if (barcode != null) {
+      await widget.db.into(widget.db.foodProducts).insert(
+            FoodProductsCompanion.insert(
+              name: name,
+              barcode: Value(barcode),
+              caloriesPer100g: _caloriesPer100g,
+              proteinPer100g: _proteinPer100g,
+              carbsPer100g: _carbsPer100g,
+              fatPer100g: _fatPer100g,
+              fiberPer100g: _fiberPer100g,
+              createdAt: DateTime.now(),
+            ),
+          );
+    }
 
     if (mounted) Navigator.of(context).pop();
   }
@@ -110,6 +134,14 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
               _textRow('Naam', _nameController, onChanged: (_) => setState(() {})),
               _mealPicker(),
               _numberRow('Hoeveelheid', _gramsController, 'g'),
+              if (widget.prefilledBarcode != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    "Wordt gekoppeld aan deze barcode, zodat je 'm de volgende keer meteen kan scannen.",
+                    style: TextStyle(fontSize: 12, color: WwColors.secondaryText(isDark)),
+                  ),
+                ),
             ]),
             const SizedBox(height: 16),
             _section('Per 100 gram', [

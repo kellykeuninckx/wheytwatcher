@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:whey_mate/data/database.dart';
 import 'package:whey_mate/main.dart';
+import 'package:whey_mate/screens/add_food_screen.dart';
 
 void main() {
   testWidgets('Zonder profiel toont de app het onboardingscherm', (WidgetTester tester) async {
@@ -348,6 +349,37 @@ void main() {
 
     final entries = await db.select(db.foodLogEntries).get();
     expect(entries.where((e) => e.name == 'Havermout'), hasLength(2));
+
+    await db.close();
+  });
+
+  testWidgets('Handmatig toevoegen met prefilledBarcode koppelt de barcode aan het nieuwe product', (WidgetTester tester) async {
+    final db = AppDatabase.forTesting();
+
+    await tester.pumpWidget(MaterialApp(
+      home: AddFoodScreen(db: db, isDark: true, prefilledBarcode: '1234567890123'),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Wordt gekoppeld aan deze barcode'), findsOneWidget);
+
+    // Volgorde van tekstvelden op dit scherm: Naam, Hoeveelheid, dan de vijf
+    // "per 100 gram"-velden te beginnen met Calorieën.
+    await tester.enterText(find.byType(TextField).at(0), 'Zelfgemaakte reep');
+    await tester.enterText(find.byType(TextField).at(2), '450');
+    await tester.pump();
+
+    await tester.tap(find.text('Voeg toe'));
+    await tester.pumpAndSettle();
+
+    final entries = await db.select(db.foodLogEntries).get();
+    expect(entries, hasLength(1));
+    expect(entries.first.name, 'Zelfgemaakte reep');
+
+    final products = await db.select(db.foodProducts).get();
+    expect(products, hasLength(1));
+    expect(products.first.barcode, '1234567890123');
+    expect(products.first.caloriesPer100g, 450);
 
     await db.close();
   });

@@ -8,6 +8,7 @@ import '../logic/nutrition_tips.dart';
 import '../theme/theme.dart';
 import '../widgets/ring_progress.dart';
 import 'add_food_screen.dart';
+import 'barcode_scanner_screen.dart';
 import 'favorites_screen.dart';
 import 'food_search_screen.dart';
 
@@ -17,9 +18,9 @@ bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.mont
 ///
 /// Eerste bouwstap: header, datumnavigatie, coach-tip, calorieën, macro's en
 /// training. Het quick-add-menu logt nu echt via "Zoek product", "Voeg
-/// handmatig toe" en "Voeg favoriet toe"; "Kopieer product", "Voeg maaltijd
-/// toe" en "Scan barcode" en een weegmoment toevoegen volgen nog. Ook nog
-/// niet meegenomen: badges, de slimme 2-wekelijkse check-in, "gemiste
+/// handmatig toe", "Voeg favoriet toe" en "Scan barcode"; "Kopieer product",
+/// "Voeg maaltijd toe" en een weegmoment toevoegen volgen nog. Ook nog niet
+/// meegenomen: badges, de slimme 2-wekelijkse check-in, "gemiste
 /// dagen"-prompt en reminders.
 class TodayScreen extends StatefulWidget {
   const TodayScreen({
@@ -126,6 +127,12 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
+  void _openBarcodeScanner() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => BarcodeScannerScreen(db: widget.db, isDark: widget.isDark)),
+    );
+  }
+
   /// Poort van `quickAddOptions`/`quickAddDropdown` uit TodayView.swift, als
   /// bottom sheet i.p.v. dropdown (idiomatischer op Android). "Zoek product"
   /// en "Voeg handmatig toe" leiden nu ergens heen; de rest volgt nog.
@@ -158,7 +165,7 @@ class _TodayScreenState extends State<TodayScreen> {
                   option(Icons.copy, 'Kopieer product', () => _notYetBuilt('Kopieer product')),
                   option(Icons.star, 'Voeg favoriet toe', _openFavorites),
                   option(Icons.restaurant_menu, 'Voeg maaltijd toe', () => _notYetBuilt('Maaltijden')),
-                  option(Icons.qr_code_scanner, 'Scan barcode', () => _notYetBuilt('Barcode scannen')),
+                  option(Icons.qr_code_scanner, 'Scan barcode', _openBarcodeScanner),
                   option(Icons.search, 'Zoek product', _openFoodSearch),
                   option(Icons.edit, 'Voeg handmatig toe', _openAddFood),
                   option(Icons.monitor_weight, 'Voeg weegmoment toe', () => _notYetBuilt('Weegmoment toevoegen')),

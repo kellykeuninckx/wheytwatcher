@@ -383,4 +383,11 @@ void main() {
 
     await db.close();
   });
+
+  // Geen widget-test voor het netwerkzoeken-scherm zelf: flutter test's
+  // TestWidgetsFlutterBinding blokkeert alle echte HTTP-requests binnen
+  // testWidgets() (retourneert altijd status 400), dus dat kan hier
+  // structureel niet werken. De servicelaag zelf (OpenFoodFactsService.
+  // searchProducts) is wél live getest in open_food_facts_service_test.dart
+  // — de UI-koppeling is handmatig geverifieerd op de emulator.
 }

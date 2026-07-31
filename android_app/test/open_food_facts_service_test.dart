@@ -16,4 +16,11 @@ void main() {
     final result = await OpenFoodFactsService.lookup('0000000000000');
     expect(result, isNull);
   });
+
+  test('searchProducts vindt merkproducten op naam', () async {
+    final results = await OpenFoodFactsService.searchProducts('nutella');
+
+    expect(results, isNotEmpty);
+    expect(results.any((r) => r.name.toLowerCase().contains('nutella')), isTrue);
+  });
 }

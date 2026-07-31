@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/database.dart';
 import '../logic/enum_labels.dart';
 import '../theme/theme.dart';
+import 'save_meal_screen.dart';
 
 enum _LogFilter { all, food, training }
 
@@ -27,10 +28,8 @@ String _formatDay(DateTime day) => '${day.day} ${_dutchMonths[day.month - 1]}';
 
 /// Poort van `LogbookView.swift`/`LogbookEntryRow.swift`: dagoverzicht van
 /// gelogde voeding en training, met filter, favoriet-toggle, dagstatus
-/// (ziek/vakantie/rustdag) en swipe-to-delete.
-///
-/// Niet meegenomen: multi-select + "Bewaar als maaltijd" (`SaveMealView`,
-/// aparte flow, nog niet geport).
+/// (ziek/vakantie/rustdag), swipe-to-delete, en multi-select + "Bewaar als
+/// maaltijd".
 class LogbookScreen extends StatefulWidget {
   const LogbookScreen({super.key, required this.db, required this.isDark});
 
@@ -43,9 +42,18 @@ class LogbookScreen extends StatefulWidget {
 
 class _LogbookScreenState extends State<LogbookScreen> {
   _LogFilter _filter = _LogFilter.all;
+  bool _isSelecting = false;
+  final Set<int> _selectedIds = {};
 
   bool get _showsFood => _filter != _LogFilter.training;
   bool get _showsTraining => _filter != _LogFilter.food;
+
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelecting = !_isSelecting;
+      if (!_isSelecting) _selectedIds.clear();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +64,12 @@ class _LogbookScreenState extends State<LogbookScreen> {
         title: Text('Logboek', style: TextStyle(color: WwColors.darkAccent(isDark))),
         backgroundColor: WwColors.background(isDark),
         elevation: 0,
+        actions: [
+          TextButton(
+            onPressed: _toggleSelectionMode,
+            child: Text(_isSelecting ? 'Gereed' : 'Selecteer', style: TextStyle(color: WwColors.aqua)),
+          ),
+        ],
       ),
       body: SafeArea(
         child: StreamBuilder<List<FoodLogEntryRow>>(
@@ -115,13 +129,58 @@ class _LogbookScreenState extends State<LogbookScreen> {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 32),
+    return Column(
       children: [
-        _filterRow(),
-        const SizedBox(height: 8),
-        for (final day in allDays) ..._daySection(day, groupedFood[day] ?? [], groupedTraining[day] ?? [], favorites, dayStatuses),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 32),
+            children: [
+              _filterRow(),
+              const SizedBox(height: 8),
+              for (final day in allDays) ..._daySection(day, groupedFood[day] ?? [], groupedTraining[day] ?? [], favorites, dayStatuses),
+            ],
+          ),
+        ),
+        if (_isSelecting && _selectedIds.isNotEmpty) _saveMealBar(food),
       ],
+    );
+  }
+
+  Widget _saveMealBar(List<FoodLogEntryRow> food) {
+    final isDark = widget.isDark;
+    final count = _selectedIds.length;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: WwColors.cardBackground(isDark), borderRadius: BorderRadius.circular(20)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$count product${count == 1 ? '' : 'en'} geselecteerd',
+            style: TextStyle(fontWeight: FontWeight.bold, color: WwColors.darkAccent(isDark)),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: WwColors.orange, foregroundColor: Colors.white),
+              onPressed: () async {
+                final entries = food.where((e) => _selectedIds.contains(e.id)).toList();
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => SaveMealScreen(db: widget.db, isDark: isDark, entries: entries)),
+                );
+                setState(() {
+                  _isSelecting = false;
+                  _selectedIds.clear();
+                });
+              },
+              icon: const Icon(Icons.save_alt),
+              label: const Text('Bewaar als maaltijd'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -278,6 +337,7 @@ class _LogbookScreenState extends State<LogbookScreen> {
 
   Widget _foodRow(FoodLogEntryRow entry, bool isFavorite) {
     final isDark = widget.isDark;
+    final isSelected = _selectedIds.contains(entry.id);
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Dismissible(
@@ -290,32 +350,51 @@ class _LogbookScreenState extends State<LogbookScreen> {
           child: const Icon(Icons.delete, color: Colors.red),
         ),
         onDismissed: (_) => (widget.db.delete(widget.db.foodLogEntries)..where((e) => e.id.equals(entry.id))).go(),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: WwColors.cardBackground(isDark), borderRadius: BorderRadius.circular(14)),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(entry.name, style: TextStyle(fontWeight: FontWeight.bold, color: WwColors.darkAccent(isDark))),
-                    Text(
-                      '${entry.grams.roundedInt} g • ${entry.calories.roundedInt} kcal',
-                      style: TextStyle(fontSize: 12, color: WwColors.secondaryText(isDark)),
-                    ),
-                  ],
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: _isSelecting
+              ? () => setState(() {
+                    if (isSelected) {
+                      _selectedIds.remove(entry.id);
+                    } else {
+                      _selectedIds.add(entry.id);
+                    }
+                  })
+              : null,
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: WwColors.cardBackground(isDark), borderRadius: BorderRadius.circular(14)),
+            child: Row(
+              children: [
+                if (_isSelecting) ...[
+                  Icon(
+                    isSelected ? Icons.check_circle : Icons.circle_outlined,
+                    color: WwColors.teal,
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(entry.name, style: TextStyle(fontWeight: FontWeight.bold, color: WwColors.darkAccent(isDark))),
+                      Text(
+                        '${entry.grams.roundedInt} g • ${entry.calories.roundedInt} kcal',
+                        style: TextStyle(fontSize: 12, color: WwColors.secondaryText(isDark)),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              InkWell(
-                key: ValueKey('favorite-toggle-${entry.id}'),
-                onTap: () => _toggleFavorite(entry, isFavorite),
-                child: Icon(
-                  isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: isFavorite ? WwColors.coral : WwColors.secondaryText(isDark),
+                InkWell(
+                  key: ValueKey('favorite-toggle-${entry.id}'),
+                  onTap: () => _toggleFavorite(entry, isFavorite),
+                  child: Icon(
+                    isFavorite ? Icons.favorite : Icons.favorite_border,
+                    color: isFavorite ? WwColors.coral : WwColors.secondaryText(isDark),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

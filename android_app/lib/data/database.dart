@@ -118,6 +118,26 @@ class FavoriteFoods extends Table {
   RealColumn get fiberGrams => real()();
 }
 
+@DataClassName('SavedMealRow')
+class SavedMeals extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  DateTimeColumn get createdAt => dateTime()();
+}
+
+@DataClassName('MealItemRow')
+class MealItems extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get savedMealId => integer().references(SavedMeals, #id)();
+  TextColumn get name => text()();
+  RealColumn get grams => real()();
+  RealColumn get calories => real()();
+  RealColumn get proteinGrams => real()();
+  RealColumn get carbsGrams => real()();
+  RealColumn get fatGrams => real()();
+  RealColumn get fiberGrams => real()();
+}
+
 @DataClassName('MealTemplateRow')
 class MealTemplates extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -190,6 +210,8 @@ class DailyTargetSnapshots extends Table {
     FoodProducts,
     FoodLogEntries,
     FavoriteFoods,
+    SavedMeals,
+    MealItems,
     MealTemplates,
     TrainingSessions,
     WeightLogs,
@@ -204,7 +226,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   /// Nog geen echte gebruikers vóór lancering, dus schema-wijzigingen tijdens
   /// deze ontwikkelfase krijgen een destructieve migratie (alles droppen en

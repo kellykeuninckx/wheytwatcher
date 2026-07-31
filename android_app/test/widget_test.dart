@@ -220,4 +220,75 @@ void main() {
 
     await db.close();
   });
+
+  testWidgets('Maaltijd opslaan vanuit logboek en weer toevoegen aan vandaag', (WidgetTester tester) async {
+    final db = AppDatabase.forTesting();
+    await db.into(db.userProfiles).insert(
+          UserProfilesCompanion.insert(
+            name: 'Jij',
+            age: 30,
+            sex: Sex.male,
+            heightCm: 175,
+            currentWeightKg: 75,
+            goalMode: GoalMode.maintenance,
+            goalPace: GoalPace.normal,
+            activityLevel: ActivityLevel.moderate,
+            createdAt: DateTime.now(),
+          ),
+        );
+    await db.into(db.foodLogEntries).insert(
+          FoodLogEntriesCompanion.insert(
+            date: DateTime.now(),
+            mealCategory: MealCategory.breakfast,
+            name: 'Havermout',
+            grams: 80,
+            calories: 311,
+            proteinGrams: 13.6,
+            carbsGrams: 52.8,
+            fatGrams: 5.6,
+            fiberGrams: 8,
+          ),
+        );
+
+    await tester.pumpWidget(WheyMateApp(db: db));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Logboek'));
+    await tester.pumpAndSettle();
+
+    // Selecteer de enige entry en bewaar als maaltijd.
+    await tester.tap(find.text('Selecteer'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Havermout'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bewaar als maaltijd'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Maaltijd opslaan'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).first, 'Ontbijtje');
+    await tester.pump();
+    await tester.tap(find.text('Opslaan'));
+    await tester.pumpAndSettle();
+
+    // Terug op Logboek; nu naar Maaltijden.
+    expect(find.text('Maaltijd opslaan'), findsNothing);
+    await tester.tap(find.text('Maaltijden'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ontbijtje'), findsOneWidget);
+    expect(find.textContaining('311'), findsWidgets);
+
+    await tester.tap(find.text('Ontbijtje'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Havermout'), findsOneWidget);
+    await tester.tap(find.text('Voeg toe aan vandaag'));
+    await tester.pumpAndSettle();
+
+    final entries = await db.select(db.foodLogEntries).get();
+    expect(entries, hasLength(2));
+    expect(entries.where((e) => e.name == 'Havermout'), hasLength(2));
+
+    await db.close();
+  });
 }

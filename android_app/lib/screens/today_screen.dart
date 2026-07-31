@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 
 import '../data/database.dart';
@@ -45,6 +46,59 @@ class _TodayScreenState extends State<TodayScreen> {
     if (hour >= 5 && hour < 12) return 'Goedemorgen';
     if (hour >= 12 && hour < 18) return 'Goedemiddag';
     return 'Goedenavond';
+  }
+
+  DateTime? _lastSnapshotDay;
+  double? _lastSnapshotCalories;
+
+  /// Poort van `ensureTodaySnapshotExists`/`upsertTodaySnapshot`: houdt een
+  /// `DailyTargetSnapshot` voor vandaag bij, zodat de eiwit-doellijn in het
+  /// Progressie-scherm iets heeft om te tonen. Alleen relevant voor vandaag —
+  /// bekeken historische dagen wijzigen dit niet.
+  void _maybeUpsertSnapshot(UserProfileRow profile, MacroTarget target) {
+    if (!_isToday) return;
+    final today = DateTime.now();
+    if (_lastSnapshotDay != null && _isSameDay(_lastSnapshotDay!, today) && _lastSnapshotCalories == target.calories) {
+      return;
+    }
+    _lastSnapshotDay = today;
+    _lastSnapshotCalories = target.calories;
+    _upsertSnapshot(profile, target, today);
+  }
+
+  Future<void> _upsertSnapshot(UserProfileRow profile, MacroTarget target, DateTime today) async {
+    final db = widget.db;
+    final all = await db.select(db.dailyTargetSnapshots).get();
+    final existing = all.where((s) => _isSameDay(s.date, today)).toList();
+
+    if (existing.isNotEmpty) {
+      await (db.update(db.dailyTargetSnapshots)..where((s) => s.id.equals(existing.first.id))).write(
+        DailyTargetSnapshotsCompanion(
+          goalMode: Value(profile.goalMode),
+          goalPace: Value(profile.goalPace),
+          calories: Value(target.calories),
+          proteinGrams: Value(target.proteinGrams),
+          carbsGrams: Value(target.carbsGrams),
+          fatGrams: Value(target.fatGrams),
+          fiberGrams: Value(target.fiberGrams),
+          trainingCalories: Value(target.trainingCalories),
+        ),
+      );
+    } else {
+      await db.into(db.dailyTargetSnapshots).insert(
+            DailyTargetSnapshotsCompanion.insert(
+              date: today,
+              goalMode: profile.goalMode,
+              goalPace: profile.goalPace,
+              calories: target.calories,
+              proteinGrams: target.proteinGrams,
+              carbsGrams: target.carbsGrams,
+              fatGrams: target.fatGrams,
+              fiberGrams: target.fiberGrams,
+              trainingCalories: target.trainingCalories,
+            ),
+          );
+    }
   }
 
   void _notYetBuilt(String feature) {
@@ -153,6 +207,8 @@ class _TodayScreenState extends State<TodayScreen> {
               // waar dit percentage instelbaar is, is nog niet gebouwd).
               extraTrainingCalories: todaysTrainingCalories * 0.5,
             );
+
+            _maybeUpsertSnapshot(profile, target);
 
             final caloriesEaten = todaysFood.fold<double>(0, (sum, e) => sum + e.calories);
             final proteinEaten = todaysFood.fold<double>(0, (sum, e) => sum + e.proteinGrams);

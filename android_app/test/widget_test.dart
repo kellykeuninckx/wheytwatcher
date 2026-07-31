@@ -118,4 +118,42 @@ void main() {
 
     await db.close();
   });
+
+  testWidgets('Progressie-tabblad toont de periodekiezer en gewichtstrend', (WidgetTester tester) async {
+    final db = AppDatabase.forTesting();
+    await db.into(db.userProfiles).insert(
+          UserProfilesCompanion.insert(
+            name: 'Jij',
+            age: 30,
+            sex: Sex.male,
+            heightCm: 175,
+            currentWeightKg: 75,
+            goalMode: GoalMode.maintenance,
+            goalPace: GoalPace.normal,
+            activityLevel: ActivityLevel.moderate,
+            createdAt: DateTime.now(),
+          ),
+        );
+    final now = DateTime.now();
+    await db.into(db.weightLogs).insert(
+          WeightLogsCompanion.insert(date: now.subtract(const Duration(days: 2)), weightKg: 75.5),
+        );
+    await db.into(db.weightLogs).insert(
+          WeightLogsCompanion.insert(date: now, weightKg: 75.0),
+        );
+
+    await tester.pumpWidget(WheyMateApp(db: db));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Progressie'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('14 dagen'), findsOneWidget);
+    expect(find.text('30 dagen'), findsOneWidget);
+    expect(find.text('Alles'), findsOneWidget);
+    expect(find.text('75 kg'), findsOneWidget);
+    expect(find.text('Nog geen gewicht'), findsNothing);
+
+    await db.close();
+  });
 }

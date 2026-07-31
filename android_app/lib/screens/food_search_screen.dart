@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/database.dart';
 import '../logic/local_food_database.dart';
 import '../theme/theme.dart';
+import '../widgets/placeholder_card.dart';
 import 'food_product_quick_add_screen.dart';
 
 /// Poort van `FoodSearchView.swift` — voor nu alleen de lokale basisproducten
@@ -142,28 +143,9 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   }
 
   Widget _placeholder({required IconData icon, required Color color, required String title, required String message}) {
-    final isDark = widget.isDark;
     return Padding(
       padding: const EdgeInsets.all(18),
-      child: WwCard(
-        isDark: isDark,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 32),
-          child: Column(
-            children: [
-              Icon(icon, size: 56, color: color),
-              const SizedBox(height: 20),
-              Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: WwColors.darkAccent(isDark))),
-              const SizedBox(height: 8),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: WwColors.secondaryText(isDark)),
-              ),
-            ],
-          ),
-        ),
-      ),
+      child: PlaceholderCard(isDark: widget.isDark, icon: icon, color: color, title: title, message: message),
     );
   }
 }

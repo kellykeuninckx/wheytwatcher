@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'data/database.dart';
+import 'screens/main_tab_screen.dart';
 import 'screens/onboarding_screen.dart';
-import 'screens/today_screen.dart';
 import 'theme/theme.dart';
 
 void main() {
@@ -39,7 +39,7 @@ class _WheyMateAppState extends State<WheyMateApp> {
 }
 
 /// Poort van `RootView.swift`: geen profiel? Onboarding. Wel een profiel?
-/// Vandaag-scherm. (MainTabView met de overige tabbladen volgt later.)
+/// De tabbalk (`MainTabScreen`, poort van `MainTabView.swift`).
 class RootScreen extends StatelessWidget {
   const RootScreen({super.key, required this.db, required this.isDark, required this.onToggleTheme});
 
@@ -63,7 +63,7 @@ class RootScreen extends StatelessWidget {
           return OnboardingScreen(db: db, isDark: isDark);
         }
 
-        return TodayScreen(db: db, isDark: isDark, onToggleTheme: onToggleTheme);
+        return MainTabScreen(db: db, isDark: isDark, onToggleTheme: onToggleTheme);
       },
     );
   }

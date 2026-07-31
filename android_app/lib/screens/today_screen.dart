@@ -8,6 +8,7 @@ import '../logic/nutrition_tips.dart';
 import '../theme/theme.dart';
 import '../widgets/ring_progress.dart';
 import 'add_food_screen.dart';
+import 'add_weight_screen.dart';
 import 'barcode_scanner_screen.dart';
 import 'favorites_screen.dart';
 import 'food_search_screen.dart';
@@ -19,9 +20,9 @@ bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.mont
 ///
 /// Eerste bouwstap: header, datumnavigatie, coach-tip, calorieën, macro's en
 /// training. Het quick-add-menu logt nu echt via "Zoek product", "Voeg
-/// handmatig toe", "Voeg favoriet toe", "Voeg maaltijd toe" en "Scan
-/// barcode"; alleen "Kopieer product" en een weegmoment toevoegen volgen nog.
-/// Ook nog niet meegenomen: badges, de slimme 2-wekelijkse check-in, "gemiste
+/// handmatig toe", "Voeg favoriet toe", "Voeg maaltijd toe", "Scan barcode"
+/// en "Voeg weegmoment toe"; alleen "Kopieer product" volgt nog. Ook nog niet
+/// meegenomen: badges, de slimme 2-wekelijkse check-in, "gemiste
 /// dagen"-prompt en reminders.
 class TodayScreen extends StatefulWidget {
   const TodayScreen({
@@ -140,10 +141,16 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
+  void _openAddWeight(UserProfileRow profile) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => AddWeightScreen(db: widget.db, isDark: widget.isDark, profile: profile)),
+    );
+  }
+
   /// Poort van `quickAddOptions`/`quickAddDropdown` uit TodayView.swift, als
-  /// bottom sheet i.p.v. dropdown (idiomatischer op Android). "Zoek product"
-  /// en "Voeg handmatig toe" leiden nu ergens heen; de rest volgt nog.
-  void _showQuickAddMenu() {
+  /// bottom sheet i.p.v. dropdown (idiomatischer op Android). Alleen "Kopieer
+  /// product" leidt nog nergens heen.
+  void _showQuickAddMenu(UserProfileRow profile) {
     final isDark = widget.isDark;
     showModalBottomSheet<void>(
       context: context,
@@ -175,7 +182,7 @@ class _TodayScreenState extends State<TodayScreen> {
                   option(Icons.qr_code_scanner, 'Scan barcode', _openBarcodeScanner),
                   option(Icons.search, 'Zoek product', _openFoodSearch),
                   option(Icons.edit, 'Voeg handmatig toe', _openAddFood),
-                  option(Icons.monitor_weight, 'Voeg weegmoment toe', () => _notYetBuilt('Weegmoment toevoegen')),
+                  option(Icons.monitor_weight, 'Voeg weegmoment toe', () => _openAddWeight(profile)),
                 ],
               ),
             ),
@@ -307,7 +314,7 @@ class _TodayScreenState extends State<TodayScreen> {
             const SizedBox(width: 10),
             _roundIconButton(
               icon: Icons.restaurant,
-              onTap: _showQuickAddMenu,
+              onTap: () => _showQuickAddMenu(profile),
             ),
           ],
         ),

@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -448,6 +449,60 @@ void main() {
     final entries = await db.select(db.foodLogEntries).get();
     expect(entries, hasLength(1));
     expect(entries.first.name, 'Banaan');
+
+    await db.close();
+  });
+
+  testWidgets('Voeg weegmoment toe logt gewicht en vult metingen voor met de laatste waarden', (WidgetTester tester) async {
+    final db = AppDatabase.forTesting();
+    await db.into(db.userProfiles).insert(
+          UserProfilesCompanion.insert(
+            name: 'Jij',
+            age: 30,
+            sex: Sex.male,
+            heightCm: 175,
+            currentWeightKg: 75,
+            goalMode: GoalMode.maintenance,
+            goalPace: GoalPace.normal,
+            activityLevel: ActivityLevel.moderate,
+            createdAt: DateTime.now(),
+          ),
+        );
+    await db.into(db.bodyMeasurementLogs).insert(
+          BodyMeasurementLogsCompanion.insert(
+            date: DateTime.now().subtract(const Duration(days: 7)),
+            waistCm: const Value(80),
+          ),
+        );
+
+    await tester.pumpWidget(WheyMateApp(db: db));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.restaurant).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Voeg weegmoment toe'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Gewicht loggen'), findsOneWidget);
+    // Vooringevuld met het huidige profielgewicht.
+    expect(find.text('75'), findsOneWidget);
+    // Vooringevuld met de laatst gelogde tailleomvang.
+    expect(find.text('80'), findsOneWidget);
+
+    await tester.enterText(find.text('75'), '77');
+    await tester.pump();
+
+    await tester.tap(find.text('Bewaar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Gewicht loggen'), findsNothing);
+
+    final profile = await db.select(db.userProfiles).getSingle();
+    expect(profile.currentWeightKg, 77);
+
+    final weightLogs = await db.select(db.weightLogs).get();
+    expect(weightLogs, hasLength(1));
+    expect(weightLogs.first.weightKg, 77);
 
     await db.close();
   });

@@ -77,4 +77,45 @@ void main() {
 
     await db.close();
   });
+
+  testWidgets('Product zoeken en loggen werkt de Vandaag-cijfers bij', (WidgetTester tester) async {
+    final db = AppDatabase.forTesting();
+    await db.into(db.userProfiles).insert(
+          UserProfilesCompanion.insert(
+            name: 'Jij',
+            age: 30,
+            sex: Sex.male,
+            heightCm: 175,
+            currentWeightKg: 75,
+            goalMode: GoalMode.maintenance,
+            goalPace: GoalPace.normal,
+            activityLevel: ActivityLevel.moderate,
+            createdAt: DateTime.now(),
+          ),
+        );
+
+    await tester.pumpWidget(WheyMateApp(db: db));
+    await tester.pumpAndSettle();
+
+    // Open het snel-toevoegen-menu (het bestekicoontje rechtsboven) en kies "Zoek product".
+    await tester.tap(find.byIcon(Icons.restaurant).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Zoek product'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, 'banaan');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Banaan'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(TextButton, 'Toevoegen'));
+    await tester.pumpAndSettle();
+
+    // Terug op Vandaag: 100 g banaan is 89 kcal, dat moet nu ergens op het scherm staan.
+    expect(find.text('Zoek product'), findsNothing);
+    expect(find.textContaining('89'), findsWidgets);
+
+    await db.close();
+  });
 }

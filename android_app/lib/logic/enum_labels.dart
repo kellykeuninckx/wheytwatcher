@@ -106,6 +106,27 @@ extension GoalPaceLabel on GoalPace {
   }
 }
 
+extension MealCategoryLabel on MealCategory {
+  String get label {
+    switch (this) {
+      case MealCategory.breakfast:
+        return 'Ontbijt';
+      case MealCategory.lunch:
+        return 'Lunch';
+      case MealCategory.dinner:
+        return 'Avondeten';
+      case MealCategory.snack:
+        return 'Snack';
+      case MealCategory.preWorkout:
+        return 'Pre-workout';
+      case MealCategory.postWorkout:
+        return 'Post-workout';
+      case MealCategory.other:
+        return 'Overig';
+    }
+  }
+}
+
 extension ActivityLevelLabel on ActivityLevel {
   String get label {
     switch (this) {

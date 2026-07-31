@@ -291,4 +291,64 @@ void main() {
 
     await db.close();
   });
+
+  testWidgets('Favoriet aanmaken in logboek, loggen vanuit Favorieten-tab', (WidgetTester tester) async {
+    final db = AppDatabase.forTesting();
+    await db.into(db.userProfiles).insert(
+          UserProfilesCompanion.insert(
+            name: 'Jij',
+            age: 30,
+            sex: Sex.male,
+            heightCm: 175,
+            currentWeightKg: 75,
+            goalMode: GoalMode.maintenance,
+            goalPace: GoalPace.normal,
+            activityLevel: ActivityLevel.moderate,
+            createdAt: DateTime.now(),
+          ),
+        );
+    await db.into(db.foodLogEntries).insert(
+          FoodLogEntriesCompanion.insert(
+            date: DateTime.now(),
+            mealCategory: MealCategory.breakfast,
+            name: 'Havermout',
+            grams: 80,
+            calories: 311,
+            proteinGrams: 13.6,
+            carbsGrams: 52.8,
+            fatGrams: 5.6,
+            fiberGrams: 8,
+          ),
+        );
+
+    await tester.pumpWidget(WheyMateApp(db: db));
+    await tester.pumpAndSettle();
+
+    // Favoriet maken vanuit Logboek.
+    await tester.tap(find.text('Logboek'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('favorite-toggle-1')));
+    await tester.pumpAndSettle();
+
+    // Leeg-staat mag hier niet meer voorkomen zodra er een favoriet is.
+    await tester.tap(find.text('Favorieten'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nog geen favorieten'), findsNothing);
+    expect(find.text('Havermout'), findsOneWidget);
+
+    await tester.tap(find.text('Havermout'));
+    await tester.pumpAndSettle();
+    expect(find.text('Toevoegen'), findsWidgets);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Toevoegen'));
+    await tester.pumpAndSettle();
+
+    // Terug op Favorieten (onAdded schakelt terug naar Vandaag als tab-root).
+    expect(find.text('Calorieën'), findsOneWidget);
+
+    final entries = await db.select(db.foodLogEntries).get();
+    expect(entries.where((e) => e.name == 'Havermout'), hasLength(2));
+
+    await db.close();
+  });
 }

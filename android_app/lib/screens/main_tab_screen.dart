@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../data/database.dart';
 import '../theme/theme.dart';
+import 'favorites_screen.dart';
 import 'logbook_screen.dart';
 import 'meals_screen.dart';
-import 'not_yet_built_screen.dart';
 import 'progress_screen.dart';
 import 'today_screen.dart';
 
-/// Poort van `MainTabView.swift`. "Favorieten" is nog niet geport — dat
-/// tabblad toont een placeholder.
+/// Poort van `MainTabView.swift`.
 class MainTabScreen extends StatefulWidget {
   const MainTabScreen({super.key, required this.db, required this.isDark, required this.onToggleTheme});
 
@@ -30,7 +29,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
     final screens = [
       TodayScreen(db: widget.db, isDark: isDark, onToggleTheme: widget.onToggleTheme),
       MealsScreen(db: widget.db, isDark: isDark),
-      NotYetBuiltScreen(isDark: isDark, title: 'Favorieten', icon: Icons.favorite),
+      FavoritesScreen(db: widget.db, isDark: isDark, onAdded: () => setState(() => _index = 0)),
       LogbookScreen(db: widget.db, isDark: isDark),
       ProgressScreen(db: widget.db, isDark: isDark),
     ];

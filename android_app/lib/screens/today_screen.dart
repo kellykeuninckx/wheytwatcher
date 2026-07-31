@@ -8,6 +8,7 @@ import '../logic/nutrition_tips.dart';
 import '../theme/theme.dart';
 import '../widgets/ring_progress.dart';
 import 'add_food_screen.dart';
+import 'favorites_screen.dart';
 import 'food_search_screen.dart';
 
 bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
@@ -15,11 +16,11 @@ bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.mont
 /// Poort van `TodayView.swift` — de "Vandaag"-hoofdweergave.
 ///
 /// Eerste bouwstap: header, datumnavigatie, coach-tip, calorieën, macro's en
-/// training. Het quick-add-menu logt nu echt via "Zoek product" en "Voeg
-/// handmatig toe"; "Kopieer product", favorieten, maaltijden, barcode
-/// scannen en een weegmoment toevoegen volgen nog. Ook nog niet meegenomen:
-/// badges, de slimme 2-wekelijkse check-in, "gemiste dagen"-prompt en
-/// reminders.
+/// training. Het quick-add-menu logt nu echt via "Zoek product", "Voeg
+/// handmatig toe" en "Voeg favoriet toe"; "Kopieer product", "Voeg maaltijd
+/// toe" en "Scan barcode" en een weegmoment toevoegen volgen nog. Ook nog
+/// niet meegenomen: badges, de slimme 2-wekelijkse check-in, "gemiste
+/// dagen"-prompt en reminders.
 class TodayScreen extends StatefulWidget {
   const TodayScreen({
     super.key,
@@ -119,6 +120,12 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
+  void _openFavorites() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => FavoritesScreen(db: widget.db, isDark: widget.isDark)),
+    );
+  }
+
   /// Poort van `quickAddOptions`/`quickAddDropdown` uit TodayView.swift, als
   /// bottom sheet i.p.v. dropdown (idiomatischer op Android). "Zoek product"
   /// en "Voeg handmatig toe" leiden nu ergens heen; de rest volgt nog.
@@ -149,7 +156,7 @@ class _TodayScreenState extends State<TodayScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   option(Icons.copy, 'Kopieer product', () => _notYetBuilt('Kopieer product')),
-                  option(Icons.star, 'Voeg favoriet toe', () => _notYetBuilt('Favorieten')),
+                  option(Icons.star, 'Voeg favoriet toe', _openFavorites),
                   option(Icons.restaurant_menu, 'Voeg maaltijd toe', () => _notYetBuilt('Maaltijden')),
                   option(Icons.qr_code_scanner, 'Scan barcode', () => _notYetBuilt('Barcode scannen')),
                   option(Icons.search, 'Zoek product', _openFoodSearch),

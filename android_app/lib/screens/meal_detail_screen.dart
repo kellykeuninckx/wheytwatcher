@@ -43,7 +43,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
           );
     }
 
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) Navigator.of(context).pop(true);
   }
 
   @override

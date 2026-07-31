@@ -390,4 +390,65 @@ void main() {
   // structureel niet werken. De servicelaag zelf (OpenFoodFactsService.
   // searchProducts) is wél live getest in open_food_facts_service_test.dart
   // — de UI-koppeling is handmatig geverifieerd op de emulator.
+
+  testWidgets('Voeg maaltijd toe vanuit Vandaag logt de opgeslagen maaltijd', (WidgetTester tester) async {
+    final db = AppDatabase.forTesting();
+    await db.into(db.userProfiles).insert(
+          UserProfilesCompanion.insert(
+            name: 'Jij',
+            age: 30,
+            sex: Sex.male,
+            heightCm: 175,
+            currentWeightKg: 75,
+            goalMode: GoalMode.maintenance,
+            goalPace: GoalPace.normal,
+            activityLevel: ActivityLevel.moderate,
+            createdAt: DateTime.now(),
+          ),
+        );
+    final mealId = await db.into(db.savedMeals).insert(
+          SavedMealsCompanion.insert(name: 'Ontbijtje', createdAt: DateTime.now()),
+        );
+    await db.into(db.mealItems).insert(
+          MealItemsCompanion.insert(
+            savedMealId: mealId,
+            name: 'Banaan',
+            grams: 100,
+            calories: 89,
+            proteinGrams: 1.1,
+            carbsGrams: 23,
+            fatGrams: 0.3,
+            fiberGrams: 2.6,
+          ),
+        );
+
+    await tester.pumpWidget(WheyMateApp(db: db));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.restaurant).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Voeg maaltijd toe'));
+    await tester.pumpAndSettle();
+
+    // "Maaltijden" staat zowel in de AppBar hier als (onzichtbaar, onder
+    // deze pushed route) als label in de tabbalk — vandaar de check op de
+    // unieke maaltijdnaam i.p.v. die dubbelzinnige tekst.
+    expect(find.text('Ontbijtje'), findsOneWidget);
+
+    await tester.tap(find.text('Ontbijtje'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Voeg toe aan vandaag'));
+    await tester.pumpAndSettle();
+
+    // Popt helemaal terug tot Vandaag (niet blijven hangen op Maaltijden).
+    expect(find.text('Ontbijtje'), findsNothing);
+    expect(find.text('Calorieën'), findsOneWidget);
+
+    final entries = await db.select(db.foodLogEntries).get();
+    expect(entries, hasLength(1));
+    expect(entries.first.name, 'Banaan');
+
+    await db.close();
+  });
 }

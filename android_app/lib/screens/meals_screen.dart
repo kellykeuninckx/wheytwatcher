@@ -81,9 +81,14 @@ class MealsScreen extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(20),
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => MealDetailScreen(db: db, isDark: isDark, meal: meal)),
-                        ),
+                        onTap: () async {
+                          final added = await Navigator.of(context).push<bool>(
+                            MaterialPageRoute(builder: (context) => MealDetailScreen(db: db, isDark: isDark, meal: meal)),
+                          );
+                          // Alleen relevant als dit scherm modaal geopend is (vanuit
+                          // Vandaag's quick-add-menu) — als tabblad is dit een no-op.
+                          if (added == true && context.mounted) Navigator.of(context).maybePop();
+                        },
                         onLongPress: () => _confirmDelete(context, meal),
                         child: WwCard(
                           isDark: isDark,

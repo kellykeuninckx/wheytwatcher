@@ -106,6 +106,18 @@ class FoodLogEntries extends Table {
   TextColumn get note => text().nullable()();
 }
 
+@DataClassName('FavoriteFoodRow')
+class FavoriteFoods extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  RealColumn get grams => real()();
+  RealColumn get calories => real()();
+  RealColumn get proteinGrams => real()();
+  RealColumn get carbsGrams => real()();
+  RealColumn get fatGrams => real()();
+  RealColumn get fiberGrams => real()();
+}
+
 @DataClassName('MealTemplateRow')
 class MealTemplates extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -177,6 +189,7 @@ class DailyTargetSnapshots extends Table {
     GoalPeriods,
     FoodProducts,
     FoodLogEntries,
+    FavoriteFoods,
     MealTemplates,
     TrainingSessions,
     WeightLogs,
@@ -191,7 +204,22 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  /// Nog geen echte gebruikers vóór lancering, dus schema-wijzigingen tijdens
+  /// deze ontwikkelfase krijgen een destructieve migratie (alles droppen en
+  /// opnieuw aanmaken) i.p.v. losse per-versie upgrade-stappen te onderhouden.
+  /// Vervang dit door echte migraties zodra de app data heeft die het waard
+  /// is om te bewaren.
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (Migrator m, int from, int to) async {
+          for (final table in allTables) {
+            await m.deleteTable(table.actualTableName);
+          }
+          await m.createAll();
+        },
+      );
 }
 
 LazyDatabase _openConnection() {

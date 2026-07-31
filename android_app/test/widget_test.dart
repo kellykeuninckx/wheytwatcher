@@ -156,4 +156,68 @@ void main() {
 
     await db.close();
   });
+
+  testWidgets('Logboek toont entries, favoriet-toggle en verwijderen werken', (WidgetTester tester) async {
+    final db = AppDatabase.forTesting();
+    await db.into(db.userProfiles).insert(
+          UserProfilesCompanion.insert(
+            name: 'Jij',
+            age: 30,
+            sex: Sex.male,
+            heightCm: 175,
+            currentWeightKg: 75,
+            goalMode: GoalMode.maintenance,
+            goalPace: GoalPace.normal,
+            activityLevel: ActivityLevel.moderate,
+            createdAt: DateTime.now(),
+          ),
+        );
+    await db.into(db.foodLogEntries).insert(
+          FoodLogEntriesCompanion.insert(
+            date: DateTime.now(),
+            mealCategory: MealCategory.breakfast,
+            name: 'Havermout',
+            grams: 80,
+            calories: 311,
+            proteinGrams: 13.6,
+            carbsGrams: 52.8,
+            fatGrams: 5.6,
+            fiberGrams: 8,
+          ),
+        );
+
+    await tester.pumpWidget(WheyMateApp(db: db));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Logboek'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Havermout'), findsOneWidget);
+    expect(find.text('ONTBIJT'), findsOneWidget);
+
+    // Favoriet-toggle: leeg hartje -> vol hartje.
+    final favoriteToggle = find.byKey(const ValueKey('favorite-toggle-1'));
+    expect(find.descendant(of: favoriteToggle, matching: find.byIcon(Icons.favorite_border)), findsOneWidget);
+    await tester.tap(favoriteToggle);
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: favoriteToggle, matching: find.byIcon(Icons.favorite)), findsOneWidget);
+    final favorites = await db.select(db.favoriteFoods).get();
+    expect(favorites, hasLength(1));
+    expect(favorites.first.name, 'Havermout');
+
+    // Dagstatus zetten via het bed-icoon.
+    await tester.tap(find.byIcon(Icons.bedtime));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rustdag'));
+    await tester.pumpAndSettle();
+    expect(find.text('Rustdag'), findsOneWidget);
+
+    // Verwijderen via swipe.
+    await tester.drag(find.text('Havermout'), const Offset(-500, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Havermout'), findsNothing);
+    expect(find.text('Nog niets gelogd'), findsOneWidget);
+
+    await db.close();
+  });
 }

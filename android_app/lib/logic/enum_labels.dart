@@ -141,3 +141,27 @@ extension ActivityLevelLabel on ActivityLevel {
     }
   }
 }
+
+extension DayStatusTypeLabel on DayStatusType {
+  String get label {
+    switch (this) {
+      case DayStatusType.sick:
+        return 'Ziek';
+      case DayStatusType.vacation:
+        return 'Vakantie';
+      case DayStatusType.restDay:
+        return 'Rustdag';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case DayStatusType.sick:
+        return Icons.medical_services;
+      case DayStatusType.vacation:
+        return Icons.flight;
+      case DayStatusType.restDay:
+        return Icons.bedtime;
+    }
+  }
+}

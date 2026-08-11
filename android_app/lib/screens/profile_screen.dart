@@ -8,6 +8,7 @@ import '../logic/goal_period.dart';
 import '../logic/purchase_manager.dart';
 import '../logic/reminder_service.dart';
 import '../theme/theme.dart';
+import 'backup_screen.dart';
 import 'paywall_screen.dart';
 
 /// iOS-weekday-conventie (1 = zondag … 7 = zaterdag), zoals bewaard in de
@@ -184,6 +185,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _settingsCard(),
                   const SizedBox(height: 16),
                   _premiumCard(),
+                  const SizedBox(height: 16),
+                  _backupCard(),
                   const SizedBox(height: 16),
                   _deleteCard(),
                 ],
@@ -507,6 +510,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _openPaywall() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => PaywallScreen(isDark: widget.isDark)),
+    );
+  }
+
+  void _openBackup() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => BackupScreen(db: widget.db, isDark: widget.isDark)),
+    );
+  }
+
+  Widget _backupCard() {
+    final isDark = widget.isDark;
+    return WwCard(
+      isDark: isDark,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: _openBackup,
+            child: Row(
+              children: [
+                Icon(Icons.backup, color: WwColors.teal),
+                const SizedBox(width: 8),
+                Text('Back-up & herstel', style: TextStyle(fontWeight: FontWeight.bold, color: WwColors.teal)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text('Bewaar al je gegevens in één bestand, of zet een eerdere back-up terug.',
+              style: TextStyle(fontSize: 11, color: WwColors.secondaryText(isDark))),
+        ],
+      ),
     );
   }
 

@@ -10,6 +10,7 @@ import '../widgets/ring_progress.dart';
 import 'add_food_screen.dart';
 import 'add_weight_screen.dart';
 import 'barcode_scanner_screen.dart';
+import 'copy_products_screen.dart';
 import 'favorites_screen.dart';
 import 'food_search_screen.dart';
 import 'meals_screen.dart';
@@ -19,10 +20,9 @@ bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.mont
 /// Poort van `TodayView.swift` — de "Vandaag"-hoofdweergave.
 ///
 /// Eerste bouwstap: header, datumnavigatie, coach-tip, calorieën, macro's en
-/// training. Het quick-add-menu logt nu echt via "Zoek product", "Voeg
-/// handmatig toe", "Voeg favoriet toe", "Voeg maaltijd toe", "Scan barcode"
-/// en "Voeg weegmoment toe"; alleen "Kopieer product" volgt nog. Ook nog niet
-/// meegenomen: badges, de slimme 2-wekelijkse check-in, "gemiste
+/// training. Het quick-add-menu is nu volledig geport — alle 7 opties leiden
+/// ergens heen. Ook nog niet meegenomen: badges, de slimme 2-wekelijkse
+/// check-in, "gemiste
 /// dagen"-prompt en reminders.
 class TodayScreen extends StatefulWidget {
   const TodayScreen({
@@ -147,6 +147,12 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
+  void _openCopyProducts() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => CopyProductsScreen(db: widget.db, isDark: widget.isDark)),
+    );
+  }
+
   /// Poort van `quickAddOptions`/`quickAddDropdown` uit TodayView.swift, als
   /// bottom sheet i.p.v. dropdown (idiomatischer op Android). Alleen "Kopieer
   /// product" leidt nog nergens heen.
@@ -176,7 +182,7 @@ class _TodayScreenState extends State<TodayScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  option(Icons.copy, 'Kopieer product', () => _notYetBuilt('Kopieer product')),
+                  option(Icons.copy, 'Kopieer product', _openCopyProducts),
                   option(Icons.star, 'Voeg favoriet toe', _openFavorites),
                   option(Icons.restaurant_menu, 'Voeg maaltijd toe', _openMeals),
                   option(Icons.qr_code_scanner, 'Scan barcode', _openBarcodeScanner),

@@ -6,6 +6,7 @@ import '../logic/calculators.dart';
 import '../logic/enum_labels.dart';
 import '../logic/app_settings.dart';
 import '../logic/coach_message.dart';
+import '../logic/purchase_manager.dart';
 import '../logic/reminder_service.dart';
 import '../theme/theme.dart';
 import '../widgets/ring_progress.dart';
@@ -16,7 +17,9 @@ import 'barcode_scanner_screen.dart';
 import 'copy_products_screen.dart';
 import 'favorites_screen.dart';
 import 'food_search_screen.dart';
+import 'macro_breakdown_screen.dart';
 import 'meals_screen.dart';
+import 'paywall_screen.dart';
 import 'profile_screen.dart';
 
 bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
@@ -131,12 +134,6 @@ class _TodayScreenState extends State<TodayScreen> {
     }
   }
 
-  void _notYetBuilt(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature volgt in een volgende bouwstap.')),
-    );
-  }
-
   void _openAddFood() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => AddFoodScreen(db: widget.db, isDark: widget.isDark)),
@@ -191,6 +188,19 @@ class _TodayScreenState extends State<TodayScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => AddRestDayScreen(db: widget.db, isDark: widget.isDark)),
     );
+  }
+
+  /// Premium-feature: macro-uitklap tonen als ontgrendeld, anders de paywall.
+  void _openMacroBreakdown(MacroBreakdownType macro, DateTime date, List<FoodLogEntryRow> entries) {
+    if (PurchaseManager.instance.isPremiumUnlocked) {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => MacroBreakdownScreen(isDark: widget.isDark, initialMacro: macro, date: date, entries: entries),
+      ));
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => PaywallScreen(isDark: widget.isDark),
+      ));
+    }
   }
 
   bool? _lastHasLoggedToday;
@@ -335,6 +345,8 @@ class _TodayScreenState extends State<TodayScreen> {
                   fat: fatEaten,
                   fiber: fiberEaten,
                   target: target,
+                  entries: todaysFood,
+                  date: _selectedDate,
                 ),
                 const SizedBox(height: 16),
                 _trainingCard(profile, todaysTrainings),
@@ -604,6 +616,8 @@ class _TodayScreenState extends State<TodayScreen> {
     required double fat,
     required double fiber,
     required MacroTarget target,
+    required List<FoodLogEntryRow> entries,
+    required DateTime date,
   }) {
     final isDark = widget.isDark;
     return WwCard(
@@ -617,19 +631,19 @@ class _TodayScreenState extends State<TodayScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               GestureDetector(
-                onTap: () => _notYetBuilt('Macro-uitklap'),
+                onTap: () => _openMacroBreakdown(MacroBreakdownType.eiwit, date, entries),
                 child: CompactRing(isDark: isDark, title: 'Eiwit', current: protein, target: target.proteinGrams, unit: 'g', gradient: WwGradients.protein),
               ),
               GestureDetector(
-                onTap: () => _notYetBuilt('Macro-uitklap'),
+                onTap: () => _openMacroBreakdown(MacroBreakdownType.koolhydraten, date, entries),
                 child: CompactRing(isDark: isDark, title: 'Carbs', current: carbs, target: target.carbsGrams, unit: 'g', gradient: WwGradients.carbs),
               ),
               GestureDetector(
-                onTap: () => _notYetBuilt('Macro-uitklap'),
+                onTap: () => _openMacroBreakdown(MacroBreakdownType.vet, date, entries),
                 child: CompactRing(isDark: isDark, title: 'Vet', current: fat, target: target.fatGrams, unit: 'g', gradient: WwGradients.fat),
               ),
               GestureDetector(
-                onTap: () => _notYetBuilt('Macro-uitklap'),
+                onTap: () => _openMacroBreakdown(MacroBreakdownType.vezels, date, entries),
                 child: CompactRing(isDark: isDark, title: 'Vezels', current: fiber, target: target.fiberGrams, unit: 'g', gradient: WwGradients.fiber),
               ),
             ],

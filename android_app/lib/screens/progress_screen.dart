@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import '../data/database.dart';
 import '../logic/app_settings.dart';
 import '../logic/enum_labels.dart';
+import '../logic/purchase_manager.dart';
 import '../logic/trend_calculator.dart';
 import '../theme/theme.dart';
 import '../widgets/placeholder_card.dart';
+import 'paywall_screen.dart';
 
 enum _ChartRange { twoWeeks, month, all }
 
@@ -68,6 +70,16 @@ class _ProgressScreenState extends State<ProgressScreen> {
   Future<void> _loadShowMeasurements() async {
     final show = await AppSettings.showBodyMeasurementsChart();
     if (mounted) setState(() => _showMeasurements = show);
+  }
+
+  /// Langere geschiedenis (maand/alles) is een premium-feature; 2 weken blijft
+  /// gratis. Bij een gated keuze zonder premium volgt de paywall.
+  void _selectRange(_ChartRange range) {
+    if (range != _ChartRange.twoWeeks && !PurchaseManager.instance.isPremiumUnlocked) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (context) => PaywallScreen(isDark: widget.isDark)));
+      return;
+    }
+    setState(() => _range = range);
   }
 
   DateTime _rangeStart(List<DateTime> allDates) {
@@ -268,7 +280,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
           final selected = range == _range;
           return Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _range = range),
+              onTap: () => _selectRange(range),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 margin: const EdgeInsets.symmetric(horizontal: 2),

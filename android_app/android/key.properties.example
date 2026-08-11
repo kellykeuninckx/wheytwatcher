@@ -1,0 +1,14 @@
+# Kopieer dit bestand naar  android/key.properties  en vul je eigen gegevens in.
+# key.properties staat in .gitignore en mag NOOIT gecommit of gedeeld worden.
+#
+# Genereer eerst een upload-keystore (in je eigen Terminal, buiten de repo):
+#   keytool -genkey -v -keystore ~/whey-mate-upload-keystore.jks \
+#           -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+# Bewaar het wachtwoord ergens veilig (bv. je wachtwoordmanager). Raak je de
+# keystore of het wachtwoord kwijt, dan kun je de app niet meer updaten.
+
+storePassword=JOUW_STORE_WACHTWOORD
+keyPassword=JOUW_KEY_WACHTWOORD
+keyAlias=upload
+storeFile=/Users/kellykeuninckx/whey-mate-upload-keystore.jks

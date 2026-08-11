@@ -15,6 +15,19 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
+// Sommige plugins (o.a. file_picker) compileren standaard tegen een oudere
+// compileSdk dan hun transitieve dependencies eisen. Forceer overal 36.
+// Moet vóór het evaluationDependsOn-block staan, anders is een project al
+// geëvalueerd wanneer we afterEvaluate registreren.
+subprojects {
+    afterEvaluate {
+        val androidExtension = extensions.findByName("android")
+        if (androidExtension is com.android.build.gradle.BaseExtension) {
+            androidExtension.compileSdkVersion(36)
+        }
+    }
+}
+
 subprojects {
     project.evaluationDependsOn(":app")
 }

@@ -19,7 +19,9 @@ if (hasReleaseKeystore) {
 
 android {
     namespace = "com.kelly.whey_mate"
-    compileSdk = flutter.compileSdkVersion
+    // Expliciet 36: file_picker (via flutter_plugin_android_lifecycle) vereist
+    // compileSdk 36 of hoger.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -35,7 +37,8 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // Google Play vereist targetSdk 35+.
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

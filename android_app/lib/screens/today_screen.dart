@@ -5,6 +5,7 @@ import '../data/database.dart';
 import '../logic/calculators.dart';
 import '../logic/enum_labels.dart';
 import '../logic/app_settings.dart';
+import '../logic/badges.dart';
 import '../logic/coach_message.dart';
 import '../logic/purchase_manager.dart';
 import '../logic/reminder_service.dart';
@@ -213,6 +214,44 @@ class _TodayScreenState extends State<TodayScreen> {
     ReminderService.refreshEveningLogReminder(hasLoggedToday: hasLoggedToday);
   }
 
+  String? _lastBadgeSignature;
+
+  /// Checkt op nieuw ontgrendelde badges zodra het aantal gelogde items/
+  /// trainingen verandert, en toont er een popup voor (poort van checkNewBadge).
+  void _maybeCheckBadges(int foodCount, int trainingCount) {
+    final signature = '$foodCount-$trainingCount';
+    if (_lastBadgeSignature == signature) return;
+    _lastBadgeSignature = signature;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final newly = await BadgeTracker.checkNewlyUnlocked(widget.db);
+      if (newly.isNotEmpty && mounted) _showNewBadges(newly);
+    });
+  }
+
+  void _showNewBadges(List<BadgeTier> badges) {
+    final isDark = widget.isDark;
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: WwColors.cardBackground(isDark),
+        title: Text(badges.length == 1 ? 'Nieuwe badge! 🎉' : 'Nieuwe badges! 🎉', style: TextStyle(color: WwColors.darkAccent(isDark))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final b in badges) ...[
+              Text(b.name, style: TextStyle(fontWeight: FontWeight.bold, color: WwColors.orange)),
+              const SizedBox(height: 2),
+              Text(b.message, style: TextStyle(fontSize: 13, color: WwColors.secondaryText(isDark))),
+              const SizedBox(height: 10),
+            ],
+          ],
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('Top!', style: TextStyle(color: WwColors.teal)))],
+      ),
+    );
+  }
+
   void _openCopyProducts() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => CopyProductsScreen(db: widget.db, isDark: widget.isDark)),
@@ -308,6 +347,7 @@ class _TodayScreenState extends State<TodayScreen> {
             );
 
             _maybeUpsertSnapshot(profile, target);
+            _maybeCheckBadges(allFood.length, allTrainings.length);
 
             final caloriesEaten = todaysFood.fold<double>(0, (sum, e) => sum + e.calories);
             final proteinEaten = todaysFood.fold<double>(0, (sum, e) => sum + e.proteinGrams);

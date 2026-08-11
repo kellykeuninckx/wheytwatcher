@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../data/database.dart';
 import '../logic/app_settings.dart';
+import '../logic/badges.dart';
 import '../logic/enum_labels.dart';
 import '../logic/purchase_manager.dart';
 import '../logic/trend_calculator.dart';
@@ -178,6 +179,82 @@ class _ProgressScreenState extends State<ProgressScreen> {
           const SizedBox(height: 16),
           _measurementCard(measurements),
         ],
+        const SizedBox(height: 16),
+        _badgesCard(allFood),
+      ],
+    );
+  }
+
+  /// Prestaties (kwark-teller, streak & wandel-badges) — all-time, dus op basis
+  /// van álle gelogde data (niet de gekozen periode). Streamt trainingen en
+  /// dagstatussen apart zodat de kaart live meebeweegt.
+  Widget _badgesCard(List<FoodLogEntryRow> allFood) {
+    return StreamBuilder<List<TrainingSessionRow>>(
+      stream: widget.db.select(widget.db.trainingSessions).watch(),
+      builder: (context, trainingSnap) {
+        final trainings = trainingSnap.data ?? const <TrainingSessionRow>[];
+        return StreamBuilder<List<DayStatusRow>>(
+          stream: widget.db.select(widget.db.dayStatuses).watch(),
+          builder: (context, dayStatusSnap) {
+            final dayStatuses = dayStatusSnap.data ?? const <DayStatusRow>[];
+            final isDark = widget.isDark;
+            return WwCard(
+              isDark: isDark,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Prestaties', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: WwColors.darkAccent(isDark))),
+                  const SizedBox(height: 14),
+                  _badgeRow('🥄', BadgeMetrics.totalKwarkGrams(allFood), BadgeTiers.kwark, 'g kwark', 'Log wat kwark om je eerste badge te halen.'),
+                  Divider(height: 22, color: WwColors.darkAccent(isDark).withValues(alpha: 0.08)),
+                  _badgeRow('🔥', BadgeMetrics.longestLoggingStreak(allFood, dayStatuses).toDouble(), BadgeTiers.streak, 'dagen', 'Log een aantal dagen op rij om je eerste badge te halen.'),
+                  Divider(height: 22, color: WwColors.darkAccent(isDark).withValues(alpha: 0.08)),
+                  _badgeRow('🚶', BadgeMetrics.totalWalkingHours(trainings), BadgeTiers.walking, 'uur', 'Log wat wandelingen om je eerste badge te halen.'),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _badgeRow(String icon, double value, List<BadgeTier> tiers, String unit, String startMessage) {
+    final isDark = widget.isDark;
+    final current = BadgeTiers.current(value, tiers);
+    final next = BadgeTiers.next(value, tiers);
+    final unlocked = current != null;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: unlocked ? WwColors.aqua.withValues(alpha: 0.15) : WwColors.darkAccent(isDark).withValues(alpha: 0.06),
+            border: Border.all(color: unlocked ? WwColors.aqua : WwColors.darkAccent(isDark).withValues(alpha: 0.15), width: 2),
+          ),
+          child: Opacity(opacity: unlocked ? 1 : 0.4, child: Text(icon, style: const TextStyle(fontSize: 16))),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(current?.name ?? 'Nog geen badge',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: unlocked ? WwColors.darkAccent(isDark) : WwColors.secondaryText(isDark))),
+              const SizedBox(height: 2),
+              Text(current?.message ?? startMessage, style: TextStyle(fontSize: 12, color: WwColors.secondaryText(isDark))),
+              if (next != null) ...[
+                const SizedBox(height: 2),
+                Text("Nog ${(next.threshold - value).roundedInt} $unit tot '${next.name}'",
+                    style: TextStyle(fontSize: 11, color: WwColors.secondaryText(isDark).withValues(alpha: 0.7))),
+              ],
+            ],
+          ),
+        ),
       ],
     );
   }

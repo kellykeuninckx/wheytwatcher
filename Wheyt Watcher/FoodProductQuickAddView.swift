@@ -7,6 +7,12 @@ struct FoodProductQuickAddView: View {
     @Environment(\.modelContext) private var modelContext
 
     let product: FoodProduct
+
+    /// Als gezet werkt het scherm in "ingrediënt-modus": de maaltijd-keuze
+    /// vervalt en in plaats van een `FoodLogEntry` te loggen wordt [onAdd]
+    /// aangeroepen met het product en de gekozen hoeveelheid. Zo hergebruikt
+    /// het bewerken van een opgeslagen maaltijd dezelfde flow.
+    var onAdd: ((FoodProduct, Double) -> Void)? = nil
     var onLogged: (() -> Void)? = nil
 
     @State private var gramsText: String = "100"
@@ -61,16 +67,20 @@ struct FoodProductQuickAddView: View {
                     }
                     .listRowBackground(Color.wwCardBackground)
 
-                    Section("Maaltijd") {
+                    if onAdd == nil {
 
-                        Picker("Maaltijd", selection: $meal) {
-                            ForEach(MealCategory.allCases, id: \.self) { category in
-                                Text(category.rawValue).tag(category)
+                        Section("Maaltijd") {
+
+                            Picker("Maaltijd", selection: $meal) {
+                                ForEach(MealCategory.allCases, id: \.self) { category in
+                                    Text(category.rawValue).tag(category)
+                                }
                             }
+
                         }
+                        .listRowBackground(Color.wwCardBackground)
 
                     }
-                    .listRowBackground(Color.wwCardBackground)
 
                     Section {
 
@@ -90,7 +100,7 @@ struct FoodProductQuickAddView: View {
 
             }
             .tint(Color.wwOrange)
-            .navigationTitle("Toevoegen")
+            .navigationTitle(onAdd != nil ? "Ingrediënt toevoegen" : "Toevoegen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
 
@@ -113,6 +123,14 @@ struct FoodProductQuickAddView: View {
     }
 
     private func log() {
+
+        if let onAdd {
+            onAdd(product, grams)
+            dismiss()
+            onLogged?()
+            return
+        }
+
         let entry = FoodLogEntry(
             date: Date(),
             mealCategory: meal,

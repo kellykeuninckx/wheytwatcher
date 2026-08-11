@@ -7,6 +7,11 @@ struct FoodSearchView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var localProducts: [FoodProduct]
 
+    /// Als gezet werkt de zoeker in "ingrediënt-modus": een gekozen product
+    /// wordt niet gelogd maar via [onPick] teruggegeven (met hoeveelheid),
+    /// zodat het bewerken van een opgeslagen maaltijd dezelfde flow hergebruikt.
+    var onPick: ((FoodProduct, Double) -> Void)? = nil
+
     @State private var query = ""
     @State private var results: [OpenFoodFactsLookupResult] = []
     @State private var localResults: [LocalFoodItem] = []
@@ -175,7 +180,7 @@ struct FoodSearchView: View {
                 }
             }
             .sheet(item: $selectedProduct) { product in
-                FoodProductQuickAddView(product: product) {
+                FoodProductQuickAddView(product: product, onAdd: onPick) {
                     dismiss()
                 }
             }

@@ -15,10 +15,16 @@ import 'food_product_quick_add_screen.dart';
 /// gevonden merkproduct lokaal gecached in `FoodProducts` zodat een latere
 /// scan/zoekopdracht 'm meteen herkent).
 class FoodSearchScreen extends StatefulWidget {
-  const FoodSearchScreen({super.key, required this.db, required this.isDark});
+  const FoodSearchScreen({super.key, required this.db, required this.isDark, this.onPick});
 
   final AppDatabase db;
   final bool isDark;
+
+  /// Als gezet werkt de zoeker in "ingrediënt-modus": een gekozen product
+  /// wordt niet naar het logboek gelogd maar via [onPick] teruggegeven (met de
+  /// gekozen hoeveelheid), zodat het bewerken van een opgeslagen maaltijd
+  /// dezelfde zoek/hoeveelheid-flow hergebruikt.
+  final Future<void> Function(FoodCandidate product, double grams)? onPick;
 
   @override
   State<FoodSearchScreen> createState() => _FoodSearchScreenState();
@@ -72,6 +78,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
         builder: (context) => FoodProductQuickAddScreen(
           db: widget.db,
           isDark: widget.isDark,
+          onAdd: widget.onPick,
           product: FoodCandidate(
             name: item.name,
             caloriesPer100g: item.caloriesPer100g,
@@ -137,7 +144,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   Future<void> _openQuickAdd(FoodCandidate candidate) async {
     final logged = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (context) => FoodProductQuickAddScreen(db: widget.db, isDark: widget.isDark, product: candidate),
+        builder: (context) => FoodProductQuickAddScreen(db: widget.db, isDark: widget.isDark, product: candidate, onAdd: widget.onPick),
       ),
     );
     if (logged == true && mounted) Navigator.of(context).pop();

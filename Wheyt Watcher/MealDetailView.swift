@@ -9,9 +9,32 @@ struct MealDetailView: View {
     let meal: SavedMeal
 
     @State private var selectedCategory: MealCategory = .lunch
+    @State private var showingSearch = false
 
     private var totalCalories: Int {
         Int(meal.items.reduce(0) { $0 + $1.calories }.rounded())
+    }
+
+    /// Voegt een ingrediënt toe dat via de productzoeker (in "ingrediënt-modus")
+    /// is gekozen: waarden worden geschaald naar de gekozen hoeveelheid.
+    private func addIngredient(_ product: FoodProduct, grams: Double) {
+        let factor = grams / 100.0
+        let item = MealItem(
+            name: product.name,
+            grams: grams,
+            calories: product.caloriesPer100g * factor,
+            proteinGrams: product.proteinPer100g * factor,
+            carbsGrams: product.carbsPer100g * factor,
+            fatGrams: product.fatPer100g * factor,
+            fiberGrams: product.fiberPer100g * factor
+        )
+        meal.items.append(item)
+        try? modelContext.save()
+    }
+
+    private func deleteItem(_ item: MealItem) {
+        modelContext.delete(item)
+        try? modelContext.save()
     }
 
     var body: some View {
@@ -41,9 +64,31 @@ struct MealDetailView: View {
 
                     VStack(alignment: .leading, spacing: 12) {
 
-                        Text("Ingrediënten")
-                            .font(.headline)
-                            .foregroundStyle(Color.wwDarkAccent)
+                        HStack {
+
+                            Text("Ingrediënten")
+                                .font(.headline)
+                                .foregroundStyle(Color.wwDarkAccent)
+
+                            Spacer()
+
+                            Button {
+                                showingSearch = true
+                            } label: {
+                                Label("Toevoegen", systemImage: "plus")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(Color.wwOrange)
+                            }
+
+                        }
+
+                        if meal.items.isEmpty {
+
+                            Text("Nog geen ingrediënten. Tik op \"Toevoegen\" om er een toe te voegen.")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.wwSecondaryText)
+
+                        }
 
                         ForEach(meal.items) { item in
 
@@ -64,6 +109,14 @@ struct MealDetailView: View {
 
                                 Text("\(item.grams.roundedInt) g")
                                     .foregroundStyle(Color.wwSecondaryText)
+
+                                Button {
+                                    deleteItem(item)
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .foregroundStyle(Color.wwSecondaryText)
+                                }
+                                .buttonStyle(.plain)
 
                             }
 
@@ -140,6 +193,11 @@ struct MealDetailView: View {
         }
         .navigationTitle(meal.name)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingSearch) {
+            FoodSearchView { product, grams in
+                addIngredient(product, grams: grams)
+            }
+        }
 
     }
 

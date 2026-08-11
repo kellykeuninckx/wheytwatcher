@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import '../data/database.dart';
 import '../logic/enum_labels.dart';
 import '../theme/theme.dart';
+import 'food_search_screen.dart';
 
 /// Poort van `MealDetailView.swift`: ingrediënten van een opgeslagen
 /// maaltijd, met een knop om alles in één keer aan het logboek toe te
-/// voegen voor een gekozen eetmoment.
+/// voegen voor een gekozen eetmoment. Ingrediënten zijn ook aanpasbaar:
+/// verwijderen per rij en toevoegen via de productzoeker.
 class MealDetailScreen extends StatefulWidget {
   const MealDetailScreen({super.key, required this.db, required this.isDark, required this.meal});
 
@@ -44,6 +46,39 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
     }
 
     if (mounted) Navigator.of(context).pop(true);
+  }
+
+  /// Voegt een ingrediënt toe via de productzoeker (in "ingrediënt-modus":
+  /// niet loggen, maar teruggeven). De StreamBuilder hieronder ververst de
+  /// lijst automatisch zodra de nieuwe [MealItem] is opgeslagen.
+  Future<void> _addIngredient() async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => FoodSearchScreen(
+          db: widget.db,
+          isDark: widget.isDark,
+          onPick: (product, grams) async {
+            final factor = grams / 100.0;
+            await widget.db.into(widget.db.mealItems).insert(
+                  MealItemsCompanion.insert(
+                    savedMealId: widget.meal.id,
+                    name: product.name,
+                    grams: grams,
+                    calories: product.caloriesPer100g * factor,
+                    proteinGrams: product.proteinPer100g * factor,
+                    carbsGrams: product.carbsPer100g * factor,
+                    fatGrams: product.fatPer100g * factor,
+                    fiberGrams: product.fiberPer100g * factor,
+                  ),
+                );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteItem(MealItemRow item) async {
+    await (widget.db.delete(widget.db.mealItems)..where((r) => r.id.equals(item.id))).go();
   }
 
   @override
@@ -87,8 +122,27 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Ingrediënten', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: WwColors.darkAccent(isDark))),
-                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Text('Ingrediënten', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: WwColors.darkAccent(isDark))),
+                          const Spacer(),
+                          TextButton.icon(
+                            onPressed: _addIngredient,
+                            style: TextButton.styleFrom(foregroundColor: WwColors.orange, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('Toevoegen'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      if (items.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            'Nog geen ingrediënten. Tik op "Toevoegen" om er een toe te voegen.',
+                            style: TextStyle(color: WwColors.secondaryText(isDark)),
+                          ),
+                        ),
                       for (var i = 0; i < items.length; i++) ...[
                         if (i > 0) Divider(height: 20, color: WwColors.darkAccent(isDark).withValues(alpha: 0.08)),
                         Row(
@@ -103,6 +157,13 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                               ),
                             ),
                             Text('${items[i].grams.roundedInt} g', style: TextStyle(color: WwColors.secondaryText(isDark))),
+                            IconButton(
+                              onPressed: () => _deleteItem(items[i]),
+                              icon: const Icon(Icons.delete_outline, size: 20),
+                              color: WwColors.secondaryText(isDark),
+                              tooltip: 'Verwijder ${items[i].name}',
+                              visualDensity: VisualDensity.compact,
+                            ),
                           ],
                         ),
                       ],

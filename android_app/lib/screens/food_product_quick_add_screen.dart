@@ -31,12 +31,18 @@ class FoodCandidate {
 
 /// Poort van `FoodProductQuickAddView.swift`: hoeveelheid + maaltijd kiezen
 /// voor een al-gekozen product, en loggen.
+///
+/// Als [onAdd] gezet is werkt het scherm in "ingrediënt-modus": de
+/// maaltijd/eetmoment-keuze vervalt en in plaats van naar het logboek te
+/// loggen wordt [onAdd] aangeroepen met het product en de gekozen hoeveelheid.
+/// Zo hergebruikt het bewerken van een opgeslagen maaltijd dezelfde flow.
 class FoodProductQuickAddScreen extends StatefulWidget {
-  const FoodProductQuickAddScreen({super.key, required this.db, required this.isDark, required this.product});
+  const FoodProductQuickAddScreen({super.key, required this.db, required this.isDark, required this.product, this.onAdd});
 
   final AppDatabase db;
   final bool isDark;
   final FoodCandidate product;
+  final Future<void> Function(FoodCandidate product, double grams)? onAdd;
 
   @override
   State<FoodProductQuickAddScreen> createState() => _FoodProductQuickAddScreenState();
@@ -59,6 +65,12 @@ class _FoodProductQuickAddScreenState extends State<FoodProductQuickAddScreen> {
   Future<void> _log() async {
     setState(() => _saving = true);
     final product = widget.product;
+
+    if (widget.onAdd != null) {
+      await widget.onAdd!(product, _grams);
+      if (mounted) Navigator.of(context).pop(true);
+      return;
+    }
 
     await widget.db.into(widget.db.foodLogEntries).insert(
           FoodLogEntriesCompanion.insert(
@@ -84,7 +96,7 @@ class _FoodProductQuickAddScreenState extends State<FoodProductQuickAddScreen> {
     return Scaffold(
       backgroundColor: WwColors.background(isDark),
       appBar: AppBar(
-        title: Text('Toevoegen', style: TextStyle(color: WwColors.darkAccent(isDark))),
+        title: Text(widget.onAdd != null ? 'Ingrediënt toevoegen' : 'Toevoegen', style: TextStyle(color: WwColors.darkAccent(isDark))),
         backgroundColor: WwColors.background(isDark),
         elevation: 0,
         iconTheme: IconThemeData(color: WwColors.orange),
@@ -128,25 +140,27 @@ class _FoodProductQuickAddScreenState extends State<FoodProductQuickAddScreen> {
                 ],
               ),
             ]),
-            const SizedBox(height: 16),
-            _section([
-              Row(
-                children: [
-                  Text('Maaltijd', style: TextStyle(color: WwColors.darkAccent(isDark))),
-                  const Spacer(),
-                  DropdownButton<MealCategory>(
-                    value: _meal,
-                    underline: const SizedBox.shrink(),
-                    dropdownColor: WwColors.cardBackground(isDark),
-                    style: TextStyle(color: WwColors.darkAccent(isDark)),
-                    items: MealCategory.values.map((m) => DropdownMenuItem(value: m, child: Text(m.label))).toList(),
-                    onChanged: (v) {
-                      if (v != null) setState(() => _meal = v);
-                    },
-                  ),
-                ],
-              ),
-            ]),
+            if (widget.onAdd == null) ...[
+              const SizedBox(height: 16),
+              _section([
+                Row(
+                  children: [
+                    Text('Maaltijd', style: TextStyle(color: WwColors.darkAccent(isDark))),
+                    const Spacer(),
+                    DropdownButton<MealCategory>(
+                      value: _meal,
+                      underline: const SizedBox.shrink(),
+                      dropdownColor: WwColors.cardBackground(isDark),
+                      style: TextStyle(color: WwColors.darkAccent(isDark)),
+                      items: MealCategory.values.map((m) => DropdownMenuItem(value: m, child: Text(m.label))).toList(),
+                      onChanged: (v) {
+                        if (v != null) setState(() => _meal = v);
+                      },
+                    ),
+                  ],
+                ),
+              ]),
+            ],
             const SizedBox(height: 16),
             _section([
               Row(

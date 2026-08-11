@@ -8,6 +8,7 @@ import '../logic/nutrition_tips.dart';
 import '../theme/theme.dart';
 import '../widgets/ring_progress.dart';
 import 'add_food_screen.dart';
+import 'add_training_screen.dart';
 import 'add_weight_screen.dart';
 import 'barcode_scanner_screen.dart';
 import 'copy_products_screen.dart';
@@ -147,6 +148,12 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
+  void _openAddTraining(UserProfileRow profile) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => AddTrainingScreen(db: widget.db, isDark: widget.isDark, profile: profile)),
+    );
+  }
+
   void _openCopyProducts() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => CopyProductsScreen(db: widget.db, isDark: widget.isDark)),
@@ -275,7 +282,7 @@ class _TodayScreenState extends State<TodayScreen> {
                   target: target,
                 ),
                 const SizedBox(height: 16),
-                _trainingCard(todaysTrainings),
+                _trainingCard(profile, todaysTrainings),
               ],
             );
           },
@@ -565,7 +572,7 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  Widget _trainingCard(List<TrainingSessionRow> todaysTrainings) {
+  Widget _trainingCard(UserProfileRow profile, List<TrainingSessionRow> todaysTrainings) {
     final isDark = widget.isDark;
     return WwCard(
       isDark: isDark,
@@ -577,7 +584,7 @@ class _TodayScreenState extends State<TodayScreen> {
           if (todaysTrainings.isEmpty)
             _isToday
                 ? InkWell(
-                    onTap: () => _notYetBuilt('Training toevoegen'),
+                    onTap: () => _openAddTraining(profile),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
@@ -606,7 +613,7 @@ class _TodayScreenState extends State<TodayScreen> {
           if (todaysTrainings.isNotEmpty && _isToday) ...[
             const Divider(),
             InkWell(
-              onTap: () => _notYetBuilt('Training toevoegen'),
+              onTap: () => _openAddTraining(profile),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

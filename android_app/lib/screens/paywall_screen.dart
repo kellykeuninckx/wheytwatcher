@@ -73,11 +73,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _feature(Icons.show_chart, 'Langere grafiek-geschiedenis (30 dagen & alles)'),
+                      _feature(Icons.qr_code_scanner, 'Barcode scanner'),
+                      const SizedBox(height: 12),
+                      _feature(Icons.show_chart, 'Uitvergrote grafieken & langere geschiedenis'),
                       const SizedBox(height: 12),
                       _feature(Icons.pie_chart, 'Gedetailleerd macro-overzicht per dag'),
                       const SizedBox(height: 12),
-                      _feature(Icons.favorite, 'Steun de doorontwikkeling van de app'),
+                      _feature(Icons.auto_awesome, 'De slimme 2-wekelijkse check-in'),
                     ],
                   ),
                 ),

@@ -329,6 +329,11 @@ class _TodayScreenState extends State<TodayScreen> {
   }
 
   void _openBarcodeScanner() {
+    // Premium-feature (1-op-1 met iOS): zonder premium de paywall tonen.
+    if (!PurchaseManager.instance.isPremiumUnlocked) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (context) => PaywallScreen(isDark: widget.isDark)));
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => BarcodeScannerScreen(db: widget.db, isDark: widget.isDark)),
     );

@@ -9,6 +9,7 @@ import '../logic/purchase_manager.dart';
 import '../logic/trend_calculator.dart';
 import '../theme/theme.dart';
 import '../widgets/placeholder_card.dart';
+import 'enlarged_chart_screen.dart';
 import 'paywall_screen.dart';
 
 enum _ChartRange { twoWeeks, month, all }
@@ -81,6 +82,19 @@ class _ProgressScreenState extends State<ProgressScreen> {
       return;
     }
     setState(() => _range = range);
+  }
+
+  /// Tikken op een grafiek opent 'm uitvergroot — premium; zonder premium (of
+  /// zonder data) volgt de paywall resp. gebeurt er niets.
+  void _openEnlarged(String title, bool hasData, Widget Function() chartBuilder) {
+    if (!hasData) return;
+    if (!PurchaseManager.instance.isPremiumUnlocked) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (context) => PaywallScreen(isDark: widget.isDark)));
+      return;
+    }
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (context) => EnlargedChartScreen(isDark: widget.isDark, title: title, chart: chartBuilder()),
+    ));
   }
 
   DateTime _rangeStart(List<DateTime> allDates) {
@@ -168,13 +182,26 @@ class _ProgressScreenState extends State<ProgressScreen> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _weightCard(weights)),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _openEnlarged('Gewicht', weights.isNotEmpty, () => _weightChart(weights)),
+                child: _weightCard(weights),
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _proteinCard(dailyProtein, dailyTargetProtein)),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _openEnlarged('Eiwit-trend', dailyProtein.isNotEmpty, () => _proteinChart(dailyProtein, dailyTargetProtein)),
+                child: _proteinCard(dailyProtein, dailyTargetProtein),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 16),
-        _caloriesCard(dailyCalories),
+        GestureDetector(
+          onTap: () => _openEnlarged('Calorieën', dailyCalories.isNotEmpty, () => _caloriesChart(dailyCalories)),
+          child: _caloriesCard(dailyCalories),
+        ),
         if (_showMeasurements) ...[
           const SizedBox(height: 16),
           _measurementCard(measurements),
@@ -309,7 +336,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
           SizedBox(
             height: 160,
             child: points.length >= 2
-                ? _measurementChart(points, selected)
+                ? GestureDetector(
+                    onTap: () => _openEnlarged(selected.label, true, () => _measurementChart(points, selected)),
+                    child: _measurementChart(points, selected),
+                  )
                 : Center(
                     child: Text('Nog te weinig metingen in deze periode.',
                         style: TextStyle(fontSize: 12, color: WwColors.secondaryText(isDark))),

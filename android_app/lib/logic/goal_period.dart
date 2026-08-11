@@ -77,4 +77,23 @@ class GoalPeriodRepo {
           );
     });
   }
+
+  /// Past een 2-wekelijkse check-in-bijstelling toe: telt [kcalDelta] bij de
+  /// cumulatieve `calorieAdjustment` en zet de check-in-datum op nu.
+  static Future<void> applyCheckInAdjustment(AppDatabase db, GoalPeriodRow period, double kcalDelta) async {
+    await (db.update(db.goalPeriods)..where((g) => g.id.equals(period.id))).write(
+      GoalPeriodsCompanion(
+        calorieAdjustment: Value(period.calorieAdjustment + kcalDelta),
+        lastCheckInDate: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  /// Registreert dat de check-in is gezien (zonder bijstelling), zodat hij niet
+  /// meteen opnieuw triggert.
+  static Future<void> markCheckedIn(AppDatabase db, GoalPeriodRow period) async {
+    await (db.update(db.goalPeriods)..where((g) => g.id.equals(period.id))).write(
+      GoalPeriodsCompanion(lastCheckInDate: Value(DateTime.now())),
+    );
+  }
 }

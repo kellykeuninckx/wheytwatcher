@@ -1,12 +1,15 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/database.dart';
 import '../logic/calculators.dart';
 import '../logic/enum_labels.dart';
+import '../logic/adaptive_check_in.dart';
 import '../logic/app_settings.dart';
 import '../logic/badges.dart';
 import '../logic/coach_message.dart';
+import '../logic/goal_period.dart';
 import '../logic/purchase_manager.dart';
 import '../logic/reminder_service.dart';
 import '../theme/theme.dart';
@@ -55,6 +58,8 @@ class _TodayScreenState extends State<TodayScreen> {
   /// instelbaar via Profiel (default 50%).
   double _trainingCreditFactor = AppSettings.defaultTrainingCreditPercent / 100;
   bool _bluntCoach = false;
+  GoalPeriodRow? _activePeriod;
+  bool _adaptiveCheckDone = false;
 
   @override
   void initState() {
@@ -65,12 +70,90 @@ class _TodayScreenState extends State<TodayScreen> {
   Future<void> _loadSettings() async {
     final percent = await AppSettings.trainingCalorieCreditPercent();
     final blunt = await AppSettings.bluntCoachMode();
+    final active = await GoalPeriodRepo.active(widget.db);
     if (mounted) {
       setState(() {
         _trainingCreditFactor = percent / 100;
         _bluntCoach = blunt;
+        _activePeriod = active;
       });
+      _maybeCheckAdaptiveCheckIn();
     }
+  }
+
+  /// Poort van `checkAdaptiveCheckIn`: elke 14 dagen (per doelperiode, niet bij
+  /// onderhoud of een afgelopen periode) de slimme check-in tonen — premium;
+  /// zonder premium max. 1x per dag een paywall-teaser.
+  Future<void> _maybeCheckAdaptiveCheckIn() async {
+    if (_adaptiveCheckDone) return;
+    final period = _activePeriod;
+    if (period == null || period.hasEnded || period.goalMode == GoalMode.maintenance) return;
+
+    final reference = period.lastCheckInDate ?? period.startDate;
+    if (DateTime.now().difference(reference).inDays < 14) return;
+    _adaptiveCheckDone = true;
+
+    if (!PurchaseManager.instance.isPremiumUnlocked) {
+      final prefs = await SharedPreferences.getInstance();
+      final lastMs = prefs.getInt('wwLastAdaptiveTeaserMs') ?? 0;
+      if (DateTime.now().millisecondsSinceEpoch - lastMs <= 24 * 60 * 60 * 1000) return;
+      await prefs.setInt('wwLastAdaptiveTeaserMs', DateTime.now().millisecondsSinceEpoch);
+      if (mounted) {
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) => PaywallScreen(isDark: widget.isDark)));
+      }
+      return;
+    }
+
+    final db = widget.db;
+    final result = AdaptiveCheckInEvaluator.evaluate(
+      period: period,
+      foodEntries: await db.select(db.foodLogEntries).get(),
+      weightLogs: await db.select(db.weightLogs).get(),
+      trainings: await db.select(db.trainingSessions).get(),
+      dayStatuses: await db.select(db.dayStatuses).get(),
+      dailyTargetSnapshots: await db.select(db.dailyTargetSnapshots).get(),
+    );
+    if (mounted) _showAdaptiveCheckIn(result, period);
+  }
+
+  void _showAdaptiveCheckIn(AdaptiveCheckInResult result, GoalPeriodRow period) {
+    final isDark = widget.isDark;
+    final (icon, title, message) = switch (result) {
+      InsufficientData(:final reason) => ('🧐', 'Nog even geduld', reason),
+      OnTrack(:final message) => ('✅', 'Je zit goed op schema!', message),
+      SuggestAdjustment(:final reasoning) => ('💡', 'Kleine bijstelling?', reasoning),
+      SuggestAdherence(:final reasoning) => ('🎯', 'Focus op je caloriedoel', reasoning),
+    };
+    final db = widget.db;
+
+    Future<void> dismiss() async {
+      await GoalPeriodRepo.markCheckedIn(db, period);
+      await _loadSettings();
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: WwColors.cardBackground(isDark),
+        title: Row(children: [Text(icon, style: const TextStyle(fontSize: 24)), const SizedBox(width: 8), Expanded(child: Text(title, style: TextStyle(color: WwColors.darkAccent(isDark))))]),
+        content: Text(message, style: TextStyle(color: WwColors.secondaryText(isDark))),
+        actions: result is SuggestAdjustment
+            ? [
+                TextButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await GoalPeriodRepo.applyCheckInAdjustment(db, period, result.kcal);
+                    await _loadSettings();
+                  },
+                  child: Text('Pas toe (${result.kcal > 0 ? "+" : ""}${result.kcal.round()} kcal/dag)', style: TextStyle(color: WwColors.teal, fontWeight: FontWeight.bold)),
+                ),
+                TextButton(onPressed: () async { Navigator.pop(context); await dismiss(); }, child: Text('Niet nu', style: TextStyle(color: WwColors.secondaryText(isDark)))),
+              ]
+            : [
+                TextButton(onPressed: () async { Navigator.pop(context); await dismiss(); }, child: Text('Begrepen', style: TextStyle(color: WwColors.teal, fontWeight: FontWeight.bold))),
+              ],
+      ),
+    );
   }
 
   bool get _isToday => _isSameDay(_selectedDate, DateTime.now());
@@ -344,6 +427,8 @@ class _TodayScreenState extends State<TodayScreen> {
               goalMode: profile.goalMode,
               goalPace: profile.goalPace,
               extraTrainingCalories: todaysTrainingCalories * _trainingCreditFactor,
+              // Cumulatieve bijstelling uit de slimme 2-wekelijkse check-in.
+              manualCalorieAdjustment: _activePeriod?.calorieAdjustment ?? 0,
             );
 
             _maybeUpsertSnapshot(profile, target);

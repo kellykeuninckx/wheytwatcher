@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import '../data/database.dart';
 import '../logic/calculators.dart';
 import '../logic/enum_labels.dart';
-import '../logic/nutrition_tips.dart';
 import '../logic/app_settings.dart';
+import '../logic/coach_message.dart';
 import '../logic/reminder_service.dart';
 import '../theme/theme.dart';
 import '../widgets/ring_progress.dart';
@@ -50,16 +50,23 @@ class _TodayScreenState extends State<TodayScreen> {
   /// Aandeel van de trainingscalorieën dat terugvloeit naar het dagbudget,
   /// instelbaar via Profiel (default 50%).
   double _trainingCreditFactor = AppSettings.defaultTrainingCreditPercent / 100;
+  bool _bluntCoach = false;
 
   @override
   void initState() {
     super.initState();
-    _loadTrainingCredit();
+    _loadSettings();
   }
 
-  Future<void> _loadTrainingCredit() async {
+  Future<void> _loadSettings() async {
     final percent = await AppSettings.trainingCalorieCreditPercent();
-    if (mounted) setState(() => _trainingCreditFactor = percent / 100);
+    final blunt = await AppSettings.bluntCoachMode();
+    if (mounted) {
+      setState(() {
+        _trainingCreditFactor = percent / 100;
+        _bluntCoach = blunt;
+      });
+    }
   }
 
   bool get _isToday => _isSameDay(_selectedDate, DateTime.now());
@@ -176,8 +183,8 @@ class _TodayScreenState extends State<TodayScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => ProfileScreen(db: widget.db, isDark: widget.isDark, profile: profile)),
     );
-    // Trainingscredit kan in Profiel gewijzigd zijn — herladen.
-    await _loadTrainingCredit();
+    // Instellingen (trainingscredit, coach-modus) kunnen in Profiel gewijzigd zijn — herladen.
+    await _loadSettings();
   }
 
   void _openAddRestDay() {
@@ -298,6 +305,8 @@ class _TodayScreenState extends State<TodayScreen> {
             final fatEaten = todaysFood.fold<double>(0, (sum, e) => sum + e.fatGrams);
             final fiberEaten = todaysFood.fold<double>(0, (sum, e) => sum + e.fiberGrams);
             final caloriesRemaining = (target.calories - caloriesEaten).clamp(0, double.infinity);
+            final proteinRemaining = (target.proteinGrams - proteinEaten).clamp(0, double.infinity).toDouble();
+            final fiberRemaining = (target.fiberGrams - fiberEaten).clamp(0, double.infinity).toDouble();
 
             return ListView(
               padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
@@ -306,7 +315,12 @@ class _TodayScreenState extends State<TodayScreen> {
                 const SizedBox(height: 16),
                 _dateNavigator(),
                 const SizedBox(height: 16),
-                _coachCard(),
+                _coachCard(
+                  hasLoggedToday: todaysFood.isNotEmpty,
+                  caloriesRemaining: caloriesRemaining.toDouble(),
+                  proteinRemaining: proteinRemaining,
+                  fiberRemaining: fiberRemaining,
+                ),
                 const SizedBox(height: 16),
                 _caloriesCard(
                   burned: todaysTrainingCalories,
@@ -478,8 +492,20 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  Widget _coachCard() {
+  Widget _coachCard({
+    required bool hasLoggedToday,
+    required double caloriesRemaining,
+    required double proteinRemaining,
+    required double fiberRemaining,
+  }) {
     final isDark = widget.isDark;
+    final message = CoachMessage.forState(
+      blunt: _bluntCoach,
+      hasLoggedToday: hasLoggedToday,
+      caloriesRemaining: caloriesRemaining,
+      proteinRemaining: proteinRemaining,
+      fiberRemaining: fiberRemaining,
+    );
     return WwCard(
       isDark: isDark,
       child: Row(
@@ -489,7 +515,7 @@ class _TodayScreenState extends State<TodayScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              NutritionTips.tip(DateTime.now()),
+              message,
               style: TextStyle(fontSize: 13, color: WwColors.darkAccent(isDark)),
             ),
           ),

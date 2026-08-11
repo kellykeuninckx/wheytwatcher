@@ -38,3 +38,53 @@ class NutritionTips {
     return all[(dayOfYear * 24 + hour) % all.length];
   }
 }
+
+/// Poort van `BluntCoachMessages` uit TodayView.swift: de botte tegenhanger van
+/// [NutritionTips], gebruikt wanneer de "bot-als-een-baksteen"-modus aan staat.
+class BluntCoachMessages {
+  BluntCoachMessages._();
+
+  /// Alleen tonen als er nog niet gelogd is vandaag — anders klopt de tekst niet.
+  static const List<String> loggingReminders = [
+    'Nog niet gelogd? De kaboutertjes gaan het niet voor je doen.',
+    'Alweer vergeten te loggen? Het zal eens niet.',
+    'Niet lullen, maar loggen!',
+  ];
+
+  static const List<String> general = [
+    'Wil je nou gains of niet? Doe wat je moet doen dan, hop!',
+    'Dat vetpercentage gaat niet vanzelf omlaag. Aan de bak, joh.',
+    'Consistentie. Ooit van gehoord? Dacht ik al.',
+  ];
+
+  /// Botte versies van de voedingsfeitjes — zelfde feit, met een plagerige staart.
+  static const List<String> bluntFactTips = [
+    "Een appel heeft zo'n 4 g vezels. Dus waar wacht je nog op?",
+    '100 g kipfilet levert je zo\'n 31 g eiwit. Aan de bak met die kip.',
+    'Volkoren brood heeft meer vezels dan wit. Kies gewoon het volkoren, joh.',
+    'Eén ei geeft je zo\'n 6 g eiwit. Bak er nog eentje bij, hop.',
+    'Linzen zitten vol eiwit én vezels. Kom op, in de pan ermee.',
+    'Magere kwark is spotgoedkoop eiwit. Geen excuus meer.',
+    "Een banaan heeft zo'n 3 g vezels. Eet 'm nou gewoon op.",
+    'Vezels houden je langer vol. Dus eet ze, in plaats van erover te lezen.',
+    'Noten zitten vol gezonde vetten. Neem een handje, geen hele zak.',
+    "100 g Griekse yoghurt geeft je zo'n 10 g eiwit. Simpel, toch?",
+    "Komkommer en co. vullen goed voor weinig calorieën. Snap je 'm?",
+    'Havermout geeft je langdurig energie. Ideaal voor duursporters — dus waar wacht je nog op?',
+    'Spieren groeien tijdens rust, niet tijdens de training. Ga dus ook echt slapen.',
+    "Een dieetpauze na een lange cut helpt je metabolisme herstellen. Neem 'm dan ook echt.",
+    'Je gewicht schommelt door vocht. Niet elke dag paniekeren, joh.',
+    'Geleidelijk zwaarder trainen is de sleutel tot spiergroei. Dus voeg dat gewichtje toe.',
+    'Slaap is net zo belangrijk als je voeding. Ga op tijd naar bed, dan.',
+    'Consistentie over weken telt, niet die ene perfecte dag. Blijf dus gewoon doorgaan.',
+    'Krachttraining tijdens een cut behoudt je spiermassa. Sla die training dus niet over.',
+    'Een te streng tekort leidt vaker tot terugval. Rustig aan dus, ja?',
+  ];
+
+  static String message(DateTime date, {required bool hasLoggedToday}) {
+    final pool = hasLoggedToday ? [...general, ...bluntFactTips] : [...loggingReminders, ...general, ...bluntFactTips];
+    final hour = date.hour;
+    final dayOfYear = date.difference(DateTime(date.year)).inDays + 1;
+    return pool[(dayOfYear * 24 + hour) % pool.length];
+  }
+}

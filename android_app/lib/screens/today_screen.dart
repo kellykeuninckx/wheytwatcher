@@ -5,6 +5,7 @@ import '../data/database.dart';
 import '../logic/calculators.dart';
 import '../logic/enum_labels.dart';
 import '../logic/nutrition_tips.dart';
+import '../logic/app_settings.dart';
 import '../logic/reminder_service.dart';
 import '../theme/theme.dart';
 import '../widgets/ring_progress.dart';
@@ -44,6 +45,21 @@ class TodayScreen extends StatefulWidget {
 
 class _TodayScreenState extends State<TodayScreen> {
   DateTime _selectedDate = DateTime.now();
+
+  /// Aandeel van de trainingscalorieën dat terugvloeit naar het dagbudget,
+  /// instelbaar via Profiel (default 50%).
+  double _trainingCreditFactor = AppSettings.defaultTrainingCreditPercent / 100;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTrainingCredit();
+  }
+
+  Future<void> _loadTrainingCredit() async {
+    final percent = await AppSettings.trainingCalorieCreditPercent();
+    if (mounted) setState(() => _trainingCreditFactor = percent / 100);
+  }
 
   bool get _isToday => _isSameDay(_selectedDate, DateTime.now());
 
@@ -256,9 +272,7 @@ class _TodayScreenState extends State<TodayScreen> {
               profile: profile,
               goalMode: profile.goalMode,
               goalPace: profile.goalPace,
-              // Trainingscredit vast op 50% voor deze bouwstap (het profielscherm
-              // waar dit percentage instelbaar is, is nog niet gebouwd).
-              extraTrainingCalories: todaysTrainingCalories * 0.5,
+              extraTrainingCalories: todaysTrainingCalories * _trainingCreditFactor,
             );
 
             _maybeUpsertSnapshot(profile, target);

@@ -59,7 +59,7 @@ class _TodayScreenState extends State<TodayScreen> {
   double _trainingCreditFactor = AppSettings.defaultTrainingCreditPercent / 100;
   bool _bluntCoach = false;
   GoalPeriodRow? _activePeriod;
-  bool _adaptiveCheckDone = false;
+  bool _dailyPromptsDone = false;
 
   @override
   void initState() {
@@ -77,31 +77,39 @@ class _TodayScreenState extends State<TodayScreen> {
         _bluntCoach = blunt;
         _activePeriod = active;
       });
-      _maybeCheckAdaptiveCheckIn();
+      _runDailyPromptsOnce();
     }
+  }
+
+  /// Draait de dagelijkse prompts één keer per view-sessie: eerst de slimme
+  /// check-in; toont die niets, dan de gemiste-dagen-prompt (nooit allebei).
+  Future<void> _runDailyPromptsOnce() async {
+    if (_dailyPromptsDone) return;
+    _dailyPromptsDone = true;
+    final shown = await _maybeCheckAdaptiveCheckIn();
+    if (!shown) await _maybeCheckMissedDays();
   }
 
   /// Poort van `checkAdaptiveCheckIn`: elke 14 dagen (per doelperiode, niet bij
   /// onderhoud of een afgelopen periode) de slimme check-in tonen — premium;
   /// zonder premium max. 1x per dag een paywall-teaser.
-  Future<void> _maybeCheckAdaptiveCheckIn() async {
-    if (_adaptiveCheckDone) return;
+  /// Geeft true terug als er iets getoond is (dialog of paywall-teaser).
+  Future<bool> _maybeCheckAdaptiveCheckIn() async {
     final period = _activePeriod;
-    if (period == null || period.hasEnded || period.goalMode == GoalMode.maintenance) return;
+    if (period == null || period.hasEnded || period.goalMode == GoalMode.maintenance) return false;
 
     final reference = period.lastCheckInDate ?? period.startDate;
-    if (DateTime.now().difference(reference).inDays < 14) return;
-    _adaptiveCheckDone = true;
+    if (DateTime.now().difference(reference).inDays < 14) return false;
 
     if (!PurchaseManager.instance.isPremiumUnlocked) {
       final prefs = await SharedPreferences.getInstance();
       final lastMs = prefs.getInt('wwLastAdaptiveTeaserMs') ?? 0;
-      if (DateTime.now().millisecondsSinceEpoch - lastMs <= 24 * 60 * 60 * 1000) return;
+      if (DateTime.now().millisecondsSinceEpoch - lastMs <= 24 * 60 * 60 * 1000) return false;
       await prefs.setInt('wwLastAdaptiveTeaserMs', DateTime.now().millisecondsSinceEpoch);
       if (mounted) {
         Navigator.of(context).push(MaterialPageRoute(builder: (context) => PaywallScreen(isDark: widget.isDark)));
       }
-      return;
+      return true;
     }
 
     final db = widget.db;
@@ -113,7 +121,91 @@ class _TodayScreenState extends State<TodayScreen> {
       dayStatuses: await db.select(db.dayStatuses).get(),
       dailyTargetSnapshots: await db.select(db.dailyTargetSnapshots).get(),
     );
-    if (mounted) _showAdaptiveCheckIn(result, period);
+    if (!mounted) return false;
+    _showAdaptiveCheckIn(result, period);
+    return true;
+  }
+
+  String _dateKey(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  /// Poort van `checkMissedDaysPrompt`: een aaneengesloten reeks (≥3) dagen
+  /// vlak vóór vandaag zonder voedingslog én zonder dagstatus → vraag of het
+  /// ziek/vakantie/rustdag was. Max. 1x per dag.
+  Future<void> _maybeCheckMissedDays() async {
+    final prefs = await SharedPreferences.getInstance();
+    final todayKey = _dateKey(DateTime.now());
+    if (prefs.getString('wwLastMissedDaysPromptDate') == todayKey) return;
+
+    final db = widget.db;
+    final food = await db.select(db.foodLogEntries).get();
+    final dayStatuses = await db.select(db.dayStatuses).get();
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final missing = <DateTime>[];
+    var offset = 1;
+    while (missing.length < 14) {
+      final day = today.subtract(Duration(days: offset));
+      final hasFood = food.any((e) => _isSameDay(e.date, day));
+      final isMarked = dayStatuses.any((s) => _isSameDay(s.date, day));
+      if (hasFood || isMarked) break;
+      missing.add(day);
+      offset++;
+    }
+    if (missing.length < 3) return;
+
+    await prefs.setString('wwLastMissedDaysPromptDate', todayKey);
+    if (mounted) _showMissedDaysPrompt(missing.reversed.toList());
+  }
+
+  void _showMissedDaysPrompt(List<DateTime> days) {
+    final isDark = widget.isDark;
+
+    Future<void> mark(DayStatusType type) async {
+      final db = widget.db;
+      await db.transaction(() async {
+        for (final day in days) {
+          await db.into(db.dayStatuses).insert(DayStatusesCompanion.insert(date: DateTime(day.year, day.month, day.day), type: type));
+        }
+      });
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: WwColors.cardBackground(isDark),
+        title: Row(children: [
+          const Text('🕊️', style: TextStyle(fontSize: 24)),
+          const SizedBox(width: 8),
+          Expanded(child: Text('${days.length} dagen niet gelogd', style: TextStyle(color: WwColors.darkAccent(isDark)))),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Was je ziek, met vakantie, of gewoon druk? Dan tellen die dagen niet mee als gemist.',
+                style: TextStyle(fontSize: 13, color: WwColors.secondaryText(isDark))),
+            const SizedBox(height: 16),
+            for (final type in DayStatusType.values)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(foregroundColor: WwColors.teal, side: BorderSide(color: WwColors.teal)),
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await mark(type);
+                  },
+                  icon: Icon(type.icon, size: 18),
+                  label: Text(type.label),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Nee, gewoon niet gelogd', style: TextStyle(color: WwColors.secondaryText(isDark)))),
+        ],
+      ),
+    );
   }
 
   void _showAdaptiveCheckIn(AdaptiveCheckInResult result, GoalPeriodRow period) {

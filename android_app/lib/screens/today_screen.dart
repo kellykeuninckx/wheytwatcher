@@ -17,6 +17,7 @@ import 'copy_products_screen.dart';
 import 'favorites_screen.dart';
 import 'food_search_screen.dart';
 import 'meals_screen.dart';
+import 'profile_screen.dart';
 
 bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
 
@@ -168,6 +169,20 @@ class _TodayScreenState extends State<TodayScreen> {
   void _openAddTraining(UserProfileRow profile) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => AddTrainingScreen(db: widget.db, isDark: widget.isDark, profile: profile)),
+    );
+  }
+
+  Future<void> _openProfile(UserProfileRow profile) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => ProfileScreen(db: widget.db, isDark: widget.isDark, profile: profile)),
+    );
+    // Trainingscredit kan in Profiel gewijzigd zijn — herladen.
+    await _loadTrainingCredit();
+  }
+
+  void _openAddRestDay() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => AddRestDayScreen(db: widget.db, isDark: widget.isDark)),
     );
   }
 
@@ -326,7 +341,7 @@ class _TodayScreenState extends State<TodayScreen> {
           children: [
             Expanded(
               child: InkWell(
-                onTap: () => _notYetBuilt('Profielscherm'),
+                onTap: () => _openProfile(profile),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -500,7 +515,7 @@ class _TodayScreenState extends State<TodayScreen> {
             children: [
               Text('Calorieën', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: WwColors.darkAccent(isDark))),
               InkWell(
-                onTap: () => _notYetBuilt('Rustdag markeren'),
+                onTap: _openAddRestDay,
                 child: Icon(Icons.bed, size: 18, color: WwColors.secondaryText(isDark)),
               ),
             ],

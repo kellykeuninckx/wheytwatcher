@@ -80,6 +80,17 @@ extension GoalModeLabel on GoalMode {
         return 'Bulk';
     }
   }
+
+  String get shortDescription {
+    switch (this) {
+      case GoalMode.cut:
+        return 'Vetpercentage omlaag, gains beschermen';
+      case GoalMode.maintenance:
+        return 'Stabiel blijven, performance bewaken';
+      case GoalMode.bulk:
+        return 'Aankomen, spiermassa opbouwen';
+    }
+  }
 }
 
 extension SexLabel on Sex {

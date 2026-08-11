@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/database.dart';
+import '../logic/reminder_service.dart';
 import '../logic/calculators.dart';
 import '../logic/enum_labels.dart';
 import '../theme/theme.dart';
@@ -142,7 +143,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           );
     }
-    // Reminder-scheduling voor _weighInWeekday volgt zodra ReminderManager is geport.
+    // Vraag meldingstoestemming en plan meteen de eerste herinneringen.
+    await ReminderService.requestPermission();
+    await ReminderService.setWeeklyWeighInReminder(enabled: true, weekday: _weighInWeekday);
+    await ReminderService.refreshAll(db);
   }
 
   @override

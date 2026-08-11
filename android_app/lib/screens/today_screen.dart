@@ -5,6 +5,7 @@ import '../data/database.dart';
 import '../logic/calculators.dart';
 import '../logic/enum_labels.dart';
 import '../logic/nutrition_tips.dart';
+import '../logic/reminder_service.dart';
 import '../theme/theme.dart';
 import '../widgets/ring_progress.dart';
 import 'add_food_screen.dart';
@@ -154,6 +155,16 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
+  bool? _lastHasLoggedToday;
+
+  /// Ververst de "vandaag nog niet gelogd"-melding zodra het wel/niet-gelogd
+  /// zijn van vandaag verandert (zodat de 18:00-melding vervalt na het loggen).
+  void _maybeRefreshEveningReminder(bool hasLoggedToday) {
+    if (_lastHasLoggedToday == hasLoggedToday) return;
+    _lastHasLoggedToday = hasLoggedToday;
+    ReminderService.refreshEveningLogReminder(hasLoggedToday: hasLoggedToday);
+  }
+
   void _openCopyProducts() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => CopyProductsScreen(db: widget.db, isDark: widget.isDark)),
@@ -230,6 +241,7 @@ class _TodayScreenState extends State<TodayScreen> {
       builder: (context, foodSnapshot) {
         final allFood = foodSnapshot.data ?? const <FoodLogEntryRow>[];
         final todaysFood = allFood.where((e) => _isSameDay(e.date, _selectedDate)).toList();
+        _maybeRefreshEveningReminder(allFood.any((e) => _isSameDay(e.date, DateTime.now())));
 
         return StreamBuilder<List<TrainingSessionRow>>(
           stream: widget.db.select(widget.db.trainingSessions).watch(),

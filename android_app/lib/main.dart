@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
 import 'data/database.dart';
+import 'logic/reminder_service.dart';
 import 'screens/main_tab_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'theme/theme.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ReminderService.init();
   runApp(WheyMateApp(db: AppDatabase()));
 }
 
@@ -20,6 +23,15 @@ class WheyMateApp extends StatefulWidget {
 
 class _WheyMateAppState extends State<WheyMateApp> {
   bool _isDark = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Bij app-start de geplande meldingen verversen op basis van de huidige stand.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ReminderService.refreshAll(widget.db);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -5,8 +5,10 @@ import '../logic/app_settings.dart';
 import '../logic/calculators.dart';
 import '../logic/enum_labels.dart';
 import '../logic/goal_period.dart';
+import '../logic/purchase_manager.dart';
 import '../logic/reminder_service.dart';
 import '../theme/theme.dart';
+import 'paywall_screen.dart';
 
 /// iOS-weekday-conventie (1 = zondag … 7 = zaterdag), zoals bewaard in de
 /// reminder-instelling.
@@ -502,32 +504,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await AppSettings.setTrainingCalorieCreditPercent(clamped);
   }
 
+  void _openPaywall() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => PaywallScreen(isDark: widget.isDark)),
+    );
+  }
+
   Widget _premiumCard() {
     final isDark = widget.isDark;
     return WwCard(
       isDark: isDark,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          InkWell(
-            onTap: () {
-              // Stub: de echte paywall/Play Billing volgt in de Billing-stap.
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Premium komt binnenkort naar Android.')),
-              );
-            },
-            child: Row(
+      child: ListenableBuilder(
+        listenable: PurchaseManager.instance,
+        builder: (context, _) {
+          if (PurchaseManager.instance.isPremiumUnlocked) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.star, color: WwColors.orange),
-                const SizedBox(width: 8),
-                Text('Ontgrendel Premium', style: TextStyle(fontWeight: FontWeight.bold, color: WwColors.orange)),
+                Row(
+                  children: [
+                    Icon(Icons.star, color: WwColors.orange),
+                    const SizedBox(width: 8),
+                    Text('Premium ontgrendeld', style: TextStyle(fontWeight: FontWeight.bold, color: WwColors.orange)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text('Bedankt voor je steun — alle premium-functies staan open.',
+                    style: TextStyle(fontSize: 11, color: WwColors.secondaryText(isDark))),
               ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text('Eenmalige aankoop — geen abonnement. (Binnenkort beschikbaar.)',
-              style: TextStyle(fontSize: 11, color: WwColors.secondaryText(isDark))),
-        ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              InkWell(
+                onTap: _openPaywall,
+                child: Row(
+                  children: [
+                    Icon(Icons.star, color: WwColors.orange),
+                    const SizedBox(width: 8),
+                    Text('Ontgrendel Premium', style: TextStyle(fontWeight: FontWeight.bold, color: WwColors.orange)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text('Eenmalige aankoop — geen abonnement.',
+                  style: TextStyle(fontSize: 11, color: WwColors.secondaryText(isDark))),
+            ],
+          );
+        },
       ),
     );
   }

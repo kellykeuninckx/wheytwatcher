@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'data/database.dart';
+import 'logic/purchase_manager.dart';
 import 'logic/reminder_service.dart';
 import 'screens/main_tab_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -9,6 +12,9 @@ import 'theme/theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ReminderService.init();
+  // Fire-and-forget: laadt de gecachte premium-status meteen en verifieert
+  // de entitlement daarna op de achtergrond (geen trage app-start).
+  unawaited(PurchaseManager.instance.init());
   runApp(WheyMateApp(db: AppDatabase()));
 }
 

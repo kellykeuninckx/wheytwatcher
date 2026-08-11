@@ -506,4 +506,120 @@ void main() {
 
     await db.close();
   });
+
+  testWidgets('Kopieer product: recent product opnieuw loggen vanuit Vandaag', (WidgetTester tester) async {
+    final db = AppDatabase.forTesting();
+    await db.into(db.userProfiles).insert(
+          UserProfilesCompanion.insert(
+            name: 'Jij',
+            age: 30,
+            sex: Sex.male,
+            heightCm: 175,
+            currentWeightKg: 75,
+            goalMode: GoalMode.maintenance,
+            goalPace: GoalPace.normal,
+            activityLevel: ActivityLevel.moderate,
+            createdAt: DateTime.now(),
+          ),
+        );
+    await db.into(db.foodLogEntries).insert(
+          FoodLogEntriesCompanion.insert(
+            date: DateTime.now(),
+            mealCategory: MealCategory.breakfast,
+            name: 'Havermout',
+            grams: 80,
+            calories: 311,
+            proteinGrams: 13.6,
+            carbsGrams: 52.8,
+            fatGrams: 5.6,
+            fiberGrams: 8,
+          ),
+        );
+
+    await tester.pumpWidget(WheyMateApp(db: db));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.restaurant).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kopieer product'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Havermout'), findsOneWidget);
+    await tester.tap(find.text('Havermout'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Kopieer 1 product'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kopieer product'), findsNothing);
+
+    final entries = await db.select(db.foodLogEntries).get();
+    expect(entries.where((e) => e.name == 'Havermout'), hasLength(2));
+
+    await db.close();
+  });
+
+  testWidgets('Kopieer product: via een specifieke dag popt helemaal terug tot Vandaag', (WidgetTester tester) async {
+    final db = AppDatabase.forTesting();
+    await db.into(db.userProfiles).insert(
+          UserProfilesCompanion.insert(
+            name: 'Jij',
+            age: 30,
+            sex: Sex.male,
+            heightCm: 175,
+            currentWeightKg: 75,
+            goalMode: GoalMode.maintenance,
+            goalPace: GoalPace.normal,
+            activityLevel: ActivityLevel.moderate,
+            createdAt: DateTime.now(),
+          ),
+        );
+    await db.into(db.foodLogEntries).insert(
+          FoodLogEntriesCompanion.insert(
+            date: DateTime.now().subtract(const Duration(days: 1)),
+            mealCategory: MealCategory.dinner,
+            name: 'Zalm',
+            grams: 150,
+            calories: 312,
+            proteinGrams: 30,
+            carbsGrams: 0,
+            fatGrams: 19.5,
+            fiberGrams: 0,
+          ),
+        );
+
+    await tester.pumpWidget(WheyMateApp(db: db));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.restaurant).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kopieer product'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Bekijk een specifieke dag'));
+    await tester.pumpAndSettle();
+
+    // Standaard al op "Gisteren", waar de zalm gelogd staat.
+    expect(find.text('Gisteren'), findsOneWidget);
+    expect(find.text('Avondeten'), findsOneWidget);
+    await tester.tap(find.text('Avondeten'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Zalm'), findsOneWidget);
+    await tester.tap(find.text('Zalm'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Kopieer 1 product'));
+    await tester.pumpAndSettle();
+
+    // Cascade-pop: helemaal terug tot Vandaag, niet blijven hangen op een tussenscherm.
+    expect(find.text('Kopieer maaltijd'), findsNothing);
+    expect(find.text('Kopieer product'), findsNothing);
+    expect(find.text('Calorieën'), findsOneWidget);
+
+    final entries = await db.select(db.foodLogEntries).get();
+    expect(entries.where((e) => e.name == 'Zalm'), hasLength(2));
+
+    await db.close();
+  });
 }

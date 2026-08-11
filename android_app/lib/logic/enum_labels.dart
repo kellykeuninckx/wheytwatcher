@@ -153,6 +153,23 @@ extension ActivityLevelLabel on ActivityLevel {
   }
 }
 
+extension BodyMeasurementTypeLabel on BodyMeasurementType {
+  String get label {
+    switch (this) {
+      case BodyMeasurementType.waist:
+        return 'Taille';
+      case BodyMeasurementType.chest:
+        return 'Borst';
+      case BodyMeasurementType.hips:
+        return 'Heupen';
+      case BodyMeasurementType.arm:
+        return 'Arm';
+      case BodyMeasurementType.thigh:
+        return 'Dij';
+    }
+  }
+}
+
 extension DayStatusTypeLabel on DayStatusType {
   String get label {
     switch (this) {

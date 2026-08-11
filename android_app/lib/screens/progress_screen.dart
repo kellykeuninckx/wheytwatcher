@@ -2,6 +2,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../data/database.dart';
+import '../logic/app_settings.dart';
+import '../logic/enum_labels.dart';
 import '../logic/trend_calculator.dart';
 import '../theme/theme.dart';
 import '../widgets/placeholder_card.dart';
@@ -54,6 +56,20 @@ class ProgressScreen extends StatefulWidget {
 class _ProgressScreenState extends State<ProgressScreen> {
   _ChartRange _range = _ChartRange.twoWeeks;
 
+  bool _showMeasurements = false;
+  BodyMeasurementType _selectedMeasurement = BodyMeasurementType.waist;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadShowMeasurements();
+  }
+
+  Future<void> _loadShowMeasurements() async {
+    final show = await AppSettings.showBodyMeasurementsChart();
+    if (mounted) setState(() => _showMeasurements = show);
+  }
+
   DateTime _rangeStart(List<DateTime> allDates) {
     final days = _range.days;
     if (days == null) {
@@ -88,7 +104,14 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   stream: widget.db.select(widget.db.dailyTargetSnapshots).watch(),
                   builder: (context, snapshotSnapshot) {
                     final allSnapshots = snapshotSnapshot.data ?? const <DailyTargetSnapshotRow>[];
-                    return _body(allWeights, allFood, allSnapshots);
+                    return StreamBuilder<List<BodyMeasurementLogRow>>(
+                      stream: widget.db.select(widget.db.bodyMeasurementLogs).watch(),
+                      builder: (context, measurementSnapshot) {
+                        final allMeasurements = List.of(measurementSnapshot.data ?? const <BodyMeasurementLogRow>[])
+                          ..sort((a, b) => a.date.compareTo(b.date));
+                        return _body(allWeights, allFood, allSnapshots, allMeasurements);
+                      },
+                    );
                   },
                 );
               },
@@ -99,7 +122,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
     );
   }
 
-  Widget _body(List<WeightLogRow> allWeights, List<FoodLogEntryRow> allFood, List<DailyTargetSnapshotRow> allSnapshots) {
+  Widget _body(List<WeightLogRow> allWeights, List<FoodLogEntryRow> allFood, List<DailyTargetSnapshotRow> allSnapshots,
+      List<BodyMeasurementLogRow> allMeasurements) {
     final rangeStart = _rangeStart([
       ...allWeights.map((w) => w.date),
       ...allFood.map((f) => f.date),
@@ -108,6 +132,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
     final weights = allWeights.where((w) => !w.date.isBefore(rangeStart)).toList();
     final food = allFood.where((f) => !f.date.isBefore(rangeStart)).toList();
     final snapshots = allSnapshots.where((s) => !s.date.isBefore(rangeStart)).toList();
+    final measurements = allMeasurements.where((m) => !m.date.isBefore(rangeStart)).toList();
 
     final dailyCalories = <DateTime, double>{};
     final dailyProtein = <DateTime, double>{};
@@ -137,7 +162,100 @@ class _ProgressScreenState extends State<ProgressScreen> {
         ),
         const SizedBox(height: 16),
         _caloriesCard(dailyCalories),
+        if (_showMeasurements) ...[
+          const SizedBox(height: 16),
+          _measurementCard(measurements),
+        ],
       ],
+    );
+  }
+
+  double? _measurementValue(BodyMeasurementLogRow log, BodyMeasurementType type) {
+    switch (type) {
+      case BodyMeasurementType.waist:
+        return log.waistCm;
+      case BodyMeasurementType.chest:
+        return log.chestCm;
+      case BodyMeasurementType.hips:
+        return log.hipsCm;
+      case BodyMeasurementType.arm:
+        return log.armCm;
+      case BodyMeasurementType.thigh:
+        return log.thighCm;
+    }
+  }
+
+  Widget _measurementCard(List<BodyMeasurementLogRow> measurements) {
+    final isDark = widget.isDark;
+    final availableTypes =
+        BodyMeasurementType.values.where((t) => measurements.any((m) => _measurementValue(m, t) != null)).toList();
+    if (availableTypes.isEmpty) return const SizedBox.shrink();
+
+    final selected = availableTypes.contains(_selectedMeasurement) ? _selectedMeasurement : availableTypes.first;
+    final points = measurements.where((m) => _measurementValue(m, selected) != null).toList();
+
+    return WwCard(
+      isDark: isDark,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Lichaamsmetingen', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: WwColors.darkAccent(isDark))),
+              const Spacer(),
+              DropdownButton<BodyMeasurementType>(
+                value: selected,
+                isDense: true,
+                underline: const SizedBox.shrink(),
+                dropdownColor: WwColors.cardBackground(isDark),
+                style: TextStyle(color: WwColors.teal, fontWeight: FontWeight.bold, fontSize: 12),
+                items: availableTypes.map((t) => DropdownMenuItem(value: t, child: Text(t.label))).toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() => _selectedMeasurement = v);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 160,
+            child: points.length >= 2
+                ? _measurementChart(points, selected)
+                : Center(
+                    child: Text('Nog te weinig metingen in deze periode.',
+                        style: TextStyle(fontSize: 12, color: WwColors.secondaryText(isDark))),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _measurementChart(List<BodyMeasurementLogRow> points, BodyMeasurementType type) {
+    final origin = points.first.date;
+    final spots = points.map((m) => FlSpot(m.date.difference(origin).inHours / 24.0, _measurementValue(m, type)!)).toList();
+    final values = spots.map((s) => s.y).toList();
+    final minY = values.reduce((a, b) => a < b ? a : b);
+    final maxY = values.reduce((a, b) => a > b ? a : b);
+    final padding = ((maxY - minY) * 0.15).clamp(0.5, double.infinity);
+
+    return LineChart(
+      LineChartData(
+        minY: minY - padding,
+        maxY: maxY + padding,
+        gridData: const FlGridData(show: false),
+        borderData: FlBorderData(show: false),
+        titlesData: _compactTitlesData(
+          origin,
+          points.length,
+          leftInterval: ((maxY + padding) - (minY - padding)) / 4,
+          leftDecimals: 1,
+        ),
+        lineTouchData: const LineTouchData(enabled: false),
+        lineBarsData: [
+          LineChartBarData(spots: spots, isCurved: false, color: WwColors.teal, barWidth: 2, dotData: const FlDotData(show: true)),
+        ],
+      ),
     );
   }
 

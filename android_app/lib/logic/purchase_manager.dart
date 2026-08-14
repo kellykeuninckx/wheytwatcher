@@ -89,6 +89,14 @@ class PurchaseManager extends ChangeNotifier {
     await _iap.restorePurchases();
   }
 
+  /// Verborgen review-toegang voor de Play Store-beoordelaars: zij moeten
+  /// premium-content "fully and freely" kunnen bekijken zonder een echte
+  /// aankoop te doen (zie Play Console's "Sign-in details"-vereiste). Getriggerd
+  /// door 7x op de ster op het Premium-scherm te tikken (zelfde conventie als
+  /// Android's "tik 7x op het buildnummer"). Zet geen echte aankoop weg bij
+  /// Google — puur een lokale flag, net als de normale unlock-cache.
+  Future<void> unlockForReview() => _setUnlocked(true);
+
   Future<void> _onPurchaseUpdates(List<PurchaseDetails> purchases) async {
     for (final purchase in purchases) {
       switch (purchase.status) {

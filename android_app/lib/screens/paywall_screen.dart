@@ -18,6 +18,22 @@ class _PaywallScreenState extends State<PaywallScreen> {
   bool _purchasing = false;
   bool _restoring = false;
 
+  // Verborgen review-toegang voor Play Store-beoordelaars, zie
+  // PurchaseManager.unlockForReview. 7 tikken op de ster, zelfde conventie
+  // als "tik 7x op het buildnummer".
+  int _starTaps = 0;
+
+  void _onStarTap() {
+    _starTaps++;
+    if (_starTaps >= 7) {
+      _starTaps = 0;
+      PurchaseManager.instance.unlockForReview();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Review-modus: Premium ontgrendeld.')),
+      );
+    }
+  }
+
   Future<void> _buy() async {
     setState(() => _purchasing = true);
     await PurchaseManager.instance.buyPremium();
@@ -55,7 +71,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
               children: [
                 Column(
                   children: [
-                    Icon(Icons.star, size: 44, color: WwColors.orange),
+                    GestureDetector(
+                      onTap: _onStarTap,
+                      child: Icon(Icons.star, size: 44, color: WwColors.orange),
+                    ),
                     const SizedBox(height: 8),
                     Text('Whey, mate! Premium',
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: WwColors.darkAccent(isDark))),

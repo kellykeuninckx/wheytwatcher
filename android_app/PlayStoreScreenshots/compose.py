@@ -91,6 +91,14 @@ def compose(shot_file, crop_h, tagline, out_file):
     total_text_h = line_h * len(lines)
 
     canvas_h = TOP_MARGIN + total_text_h + GAP + h + 2 * BEZEL + BOTTOM_MARGIN
+
+    # Play Store staat max. 2:1 (lengte:breedte) toe voor screenshots. De losse
+    # telefoonfoto + tagline erboven wordt al gauw hoger-smaller dan dat, dus
+    # verbreden we het canvas (extra gradient-marge links/rechts) i.p.v. de
+    # screenshot zelf te verkleinen of content weg te snijden.
+    min_w_for_ratio = -(-canvas_h // 2) + 4  # ceil(canvas_h / 2) + veiligheidsmarge
+    canvas_w = max(canvas_w, min_w_for_ratio)
+
     canvas = vertical_gradient(canvas_w, canvas_h, TEAL, MINT)
     draw = ImageDraw.Draw(canvas)
 
@@ -103,14 +111,16 @@ def compose(shot_file, crop_h, tagline, out_file):
         draw.text((tx, text_y), line, font=font, fill=(255, 255, 255))
         text_y += line_h
 
-    # Phone frame: black rounded rect (bezel) behind the screenshot
+    # Phone frame: black rounded rect (bezel) behind de screenshot, horizontaal
+    # gecentreerd binnen het (mogelijk verbrede) canvas.
     frame_top = TOP_MARGIN + total_text_h + GAP
-    frame_box = (SIDE_MARGIN, frame_top, SIDE_MARGIN + w + 2 * BEZEL, frame_top + h + 2 * BEZEL)
+    frame_left = (canvas_w - (w + 2 * BEZEL)) / 2
+    frame_box = (frame_left, frame_top, frame_left + w + 2 * BEZEL, frame_top + h + 2 * BEZEL)
     draw.rounded_rectangle(frame_box, radius=CORNER_RADIUS + BEZEL, fill=(10, 14, 18))
 
     # Rounded screenshot pasted on top
     mask = rounded_mask((w, h), CORNER_RADIUS)
-    canvas.paste(img, (SIDE_MARGIN + BEZEL, frame_top + BEZEL), mask)
+    canvas.paste(img, (round(frame_left + BEZEL), frame_top + BEZEL), mask)
 
     canvas.save(os.path.join(SP, out_file))
     print(f"{out_file}: {canvas_w}x{canvas_h}")

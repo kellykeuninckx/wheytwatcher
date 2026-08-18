@@ -21,7 +21,7 @@ enum GoalMode: String, Codable, CaseIterable, Identifiable {
         case .cut:
             return "Vetpercentage omlaag, gains beschermen"
         case .maintenance:
-            return "Stabiel blijven, performance bewaken"
+            return "Op gewicht blijven, spiermassa behouden"
         case .bulk:
             return "Aankomen, spiermassa opbouwen"
         }

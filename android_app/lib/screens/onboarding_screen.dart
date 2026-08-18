@@ -198,6 +198,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _onGoalChanged();
                 },
               ),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  _goalMode.shortDescription,
+                  style: TextStyle(fontSize: 11, color: WwColors.secondaryText(isDark)),
+                ),
+              ),
               _numberRow('Doelgewicht (optioneel)', _targetWeightController, 'kg'),
               _enumDropdown<GoalPace>(
                 label: 'Tempo',

@@ -86,7 +86,7 @@ extension GoalModeLabel on GoalMode {
       case GoalMode.cut:
         return 'Vetpercentage omlaag, gains beschermen';
       case GoalMode.maintenance:
-        return 'Stabiel blijven, performance bewaken';
+        return 'Op gewicht blijven, spiermassa behouden';
       case GoalMode.bulk:
         return 'Aankomen, spiermassa opbouwen';
     }

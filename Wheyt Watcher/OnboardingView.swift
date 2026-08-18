@@ -235,6 +235,10 @@ struct OnboardingView: View {
 
                     }
 
+                    Text(goalMode.shortDescription)
+                        .font(.caption)
+                        .foregroundStyle(Color.wwSecondaryText)
+
                     HStack {
                         Text("Doelgewicht (optioneel)")
                             .foregroundStyle(Color.wwDarkAccent)

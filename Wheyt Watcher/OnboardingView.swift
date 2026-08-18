@@ -6,6 +6,7 @@ struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var name = ""
+    @State private var showingNameRequiredAlert = false
 
     @State private var age = 30
 
@@ -68,7 +69,7 @@ struct OnboardingView: View {
                 Section("Jij") {
 
                     TextField(
-                        "Naam",
+                        "Naam (verplicht)",
                         text: $name
                     )
                     .foregroundStyle(Color.wwDarkAccent)
@@ -336,7 +337,11 @@ struct OnboardingView: View {
 
                     Button {
 
-                        saveProfile()
+                        if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            showingNameRequiredAlert = true
+                        } else {
+                            saveProfile()
+                        }
 
                     } label: {
 
@@ -344,13 +349,6 @@ struct OnboardingView: View {
                             .frame(maxWidth: .infinity)
 
                     }
-                    .disabled(
-                        name
-                            .trimmingCharacters(
-                                in: .whitespacesAndNewlines
-                            )
-                            .isEmpty
-                    )
                     .buttonStyle(.borderedProminent)
                     .tint(Color.wwTeal)
 
@@ -375,6 +373,9 @@ struct OnboardingView: View {
             }
             .onChange(of: goalPace) {
                 durationWeeks = GoalDurationAdvisor.recommendedWeeks(for: goalMode, pace: goalPace)
+            }
+            .alert("Vul eerst je naam in", isPresented: $showingNameRequiredAlert) {
+                Button("Oké", role: .cancel) {}
             }
 
         }

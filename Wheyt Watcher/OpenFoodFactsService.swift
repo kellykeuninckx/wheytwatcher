@@ -18,6 +18,17 @@ enum OpenFoodFactsError: Error {
 
 enum OpenFoodFactsService {
 
+    /// Open Food Facts blokkeert tegenwoordig anonieme requests zonder identificerende
+    /// `User-Agent` met sporadische 503's, vooral op zoek-endpoints — vandaar deze header
+    /// op elke aanvraag.
+    private static let userAgent = "WheytWatcher-iOS/1.0 (+https://github.com/kellykeuninckx/wheytwatcher)"
+
+    private static func request(for url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        return request
+    }
+
     /// Zoekt een product op via barcode bij Open Food Facts (gratis, geen API-key nodig).
     /// Geeft nil terug als het product niet bestaat in hun database (geen fout, gewoon "niet gevonden").
     static func lookup(barcode: String) async throws -> OpenFoodFactsLookupResult? {
@@ -27,7 +38,7 @@ enum OpenFoodFactsService {
             throw OpenFoodFactsError.invalidURL
         }
 
-        let (data, _) = try await URLSession.shared.data(from: url)
+        let (data, _) = try await URLSession.shared.data(for: request(for: url))
         let decoded = try JSONDecoder().decode(OpenFoodFactsResponse.self, from: data)
 
         guard decoded.status == 1,
@@ -51,14 +62,14 @@ enum OpenFoodFactsService {
         )
     }
 
-    /// Zoekt producten op naam bij Open Food Facts. Geeft een lege lijst terug als er niks matcht.
+    /// Zoekt producten op naam via de search-a-licious API. Geeft een lege lijst terug als er
+    /// niks matcht (geen fout). De oude `cgi/search.pl` bleek zelfs mét een geldige User-Agent
+    /// onbetrouwbaar (herhaaldelijk een 503 "temporarily unavailable"), en `/api/v2/search` met
+    /// `search_terms` filtert niet echt op tekst — vandaar deze nieuwere endpoint.
     static func searchProducts(query: String) async throws -> [OpenFoodFactsLookupResult] {
-        var components = URLComponents(string: "https://nl.openfoodfacts.org/cgi/search.pl")
+        var components = URLComponents(string: "https://search.openfoodfacts.org/search")
         components?.queryItems = [
-            URLQueryItem(name: "search_terms", value: query),
-            URLQueryItem(name: "search_simple", value: "1"),
-            URLQueryItem(name: "action", value: "process"),
-            URLQueryItem(name: "json", value: "1"),
+            URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "page_size", value: "20"),
             URLQueryItem(name: "fields", value: "product_name,brands,code,nutriments")
         ]
@@ -67,10 +78,10 @@ enum OpenFoodFactsService {
             throw OpenFoodFactsError.invalidURL
         }
 
-        let (data, _) = try await URLSession.shared.data(from: url)
+        let (data, _) = try await URLSession.shared.data(for: request(for: url))
         let decoded = try JSONDecoder().decode(OpenFoodFactsSearchResponse.self, from: data)
 
-        return decoded.products.compactMap { product in
+        return decoded.hits.compactMap { product in
             guard let name = product.productName,
                   !name.trimmingCharacters(in: .whitespaces).isEmpty else {
                 return nil
@@ -80,7 +91,7 @@ enum OpenFoodFactsService {
 
             return OpenFoodFactsLookupResult(
                 name: name,
-                brand: product.brands,
+                brand: product.brands?.isEmpty == false ? product.brands?.joined(separator: ", ") : nil,
                 barcode: product.code,
                 caloriesPer100g: nutriments?.energyKcal100g ?? 0,
                 proteinPer100g: nutriments?.proteins100g ?? 0,
@@ -100,12 +111,12 @@ private struct OpenFoodFactsResponse: Codable {
 }
 
 private struct OpenFoodFactsSearchResponse: Codable {
-    let products: [OpenFoodFactsSearchProduct]
+    let hits: [OpenFoodFactsSearchProduct]
 }
 
 private struct OpenFoodFactsSearchProduct: Codable {
     let productName: String?
-    let brands: String?
+    let brands: [String]?
     let code: String?
     let nutriments: OpenFoodFactsNutriments?
 

@@ -156,6 +156,12 @@ struct CopyProductsEntryView: View {
                         }
                         .buttonStyle(.plain)
 
+                        // Extra ruimte onderaan: zonder dit heeft `scrollTo(anchor: .center)`
+                        // voor producten dicht bij het einde van de lijst geen ruimte om naartoe
+                        // te scrollen, dus blijft het gram-invoerveld onder het toetsenbord staan.
+                        Color.clear
+                            .frame(height: 300)
+
                     }
                     .padding(16)
 
@@ -491,6 +497,8 @@ struct CopyMealDetailView: View {
 
             DumbbellPatternBackground()
 
+            ScrollViewReader { proxy in
+
             ScrollView {
 
                 LazyVStack(spacing: 16) {
@@ -536,7 +544,15 @@ struct CopyMealDetailView: View {
                                         SelectAllTextField(
                                             text: $selections[index].gramsText,
                                             keyboardType: .decimalPad,
-                                            textColor: UIColor(Color.wwDarkAccent)
+                                            textColor: UIColor(Color.wwDarkAccent),
+                                            onFocusChange: { isFocused in
+                                                guard isFocused else { return }
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                                    withAnimation {
+                                                        proxy.scrollTo(entry.id, anchor: .center)
+                                                    }
+                                                }
+                                            }
                                         )
                                         .frame(width: 56)
                                     }
@@ -566,9 +582,15 @@ struct CopyMealDetailView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .wwCard()
+                        .id(entry.id)
                     }
+
+                    Color.clear
+                        .frame(height: 300)
                 }
                 .padding(16)
+            }
+
             }
 
         }

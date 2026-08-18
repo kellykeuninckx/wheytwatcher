@@ -1,12 +1,46 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:timezone/timezone.dart';
 
 import 'package:whey_mate/data/database.dart';
 import 'package:whey_mate/main.dart';
 import 'package:whey_mate/screens/add_food_screen.dart';
 
+/// `flutter_local_notifications` normaal registreert zichzelf via
+/// `registerWith()`, aangeroepen door de gegenereerde plugin-registrant bij
+/// een echte platform-embedding (Android/iOS). `flutter_test` doet dat niet,
+/// dus zonder dit blijft `FlutterLocalNotificationsPlatform.instance`
+/// oningevuld en crasht elke test die `ReminderService` aanroept (dat gebeurt
+/// al bij het opstarten van `WheyMateApp`) met een `LateInitializationError`.
+/// Deze fake vervangt alleen wat `ReminderService.refreshAll()` daadwerkelijk
+/// aanroept — echte meldingen versturen is hier niet nodig of mogelijk.
+class _FakeAndroidFlutterLocalNotificationsPlugin extends AndroidFlutterLocalNotificationsPlugin {
+  @override
+  Future<void> cancel(int id, {String? tag}) async {}
+
+  @override
+  Future<List<PendingNotificationRequest>> pendingNotificationRequests() async => [];
+
+  @override
+  Future<void> zonedSchedule(
+    int id,
+    String? title,
+    String? body,
+    TZDateTime scheduledDate,
+    AndroidNotificationDetails? notificationDetails, {
+    required AndroidScheduleMode scheduleMode,
+    String? payload,
+    DateTimeComponents? matchDateTimeComponents,
+  }) async {}
+}
+
 void main() {
+  setUpAll(() {
+    FlutterLocalNotificationsPlatform.instance = _FakeAndroidFlutterLocalNotificationsPlugin();
+  });
+
   testWidgets('Zonder profiel toont de app het onboardingscherm', (WidgetTester tester) async {
     final db = AppDatabase.forTesting();
     await tester.pumpWidget(WheyMateApp(db: db));
@@ -38,6 +72,11 @@ void main() {
       find.byType(ListView),
       const Offset(0, -300),
     );
+    // Extra marge bovenop "net zichtbaar": de Doel-uitleg-caption maakt de
+    // lijst iets langer, waardoor de knop anders precies op de rand van het
+    // testviewport valt en de tap mist.
+    await tester.drag(find.byType(ListView), const Offset(0, -60));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Start Whey, mate!'));
     await tester.pumpAndSettle();
 

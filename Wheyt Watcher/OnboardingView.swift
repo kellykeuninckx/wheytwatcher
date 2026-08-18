@@ -73,12 +73,27 @@ struct OnboardingView: View {
                     )
                     .foregroundStyle(Color.wwDarkAccent)
 
-                    Stepper(
-                        "Leeftijd: \(age)",
-                        value: $age,
-                        in: 12...90
-                    )
-                    .foregroundStyle(Color.wwDarkAccent)
+                    HStack {
+
+                        Text("Leeftijd")
+                            .foregroundStyle(Color.wwDarkAccent)
+
+                        Spacer()
+
+                        TextField(
+                            "jaar",
+                            value: $age,
+                            format: .number
+                        )
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 70)
+                        .foregroundStyle(Color.wwDarkAccent)
+
+                        Text("jaar")
+                            .foregroundStyle(Color.wwSecondaryText)
+
+                    }
 
                     Picker(
                         "Geslacht",
@@ -108,6 +123,7 @@ struct OnboardingView: View {
                         )
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
+                        .frame(width: 70)
                         .foregroundStyle(Color.wwDarkAccent)
 
                         Text("cm")
@@ -129,6 +145,7 @@ struct OnboardingView: View {
                         )
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
+                        .frame(width: 70)
                         .foregroundStyle(Color.wwDarkAccent)
 
                         Text("kg")
@@ -154,6 +171,7 @@ struct OnboardingView: View {
                         TextField("cm", text: $waistText)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
+                            .frame(width: 70)
                             .foregroundStyle(Color.wwDarkAccent)
                     }
 
@@ -163,6 +181,7 @@ struct OnboardingView: View {
                         TextField("cm", text: $chestText)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
+                            .frame(width: 70)
                             .foregroundStyle(Color.wwDarkAccent)
                     }
 
@@ -172,6 +191,7 @@ struct OnboardingView: View {
                         TextField("cm", text: $hipsText)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
+                            .frame(width: 70)
                             .foregroundStyle(Color.wwDarkAccent)
                     }
 
@@ -181,6 +201,7 @@ struct OnboardingView: View {
                         TextField("cm", text: $armText)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
+                            .frame(width: 70)
                             .foregroundStyle(Color.wwDarkAccent)
                     }
 
@@ -190,6 +211,7 @@ struct OnboardingView: View {
                         TextField("cm", text: $thighText)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
+                            .frame(width: 70)
                             .foregroundStyle(Color.wwDarkAccent)
                     }
 
@@ -296,7 +318,7 @@ struct OnboardingView: View {
 
                 Section("Wekelijkse weeg-herinnering") {
 
-                    Picker("Wegdag", selection: $weighInWeekday) {
+                    Picker("Weegdag", selection: $weighInWeekday) {
                         ForEach(weekdayOptions, id: \.value) { option in
                             Text(option.name).tag(option.value)
                         }

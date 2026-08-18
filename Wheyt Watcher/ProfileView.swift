@@ -368,7 +368,7 @@ struct ProfileView: View {
                 }
 
             if reminderWeeklyWeighIn {
-                Picker("Wegdag", selection: $weighInWeekday) {
+                Picker("Weegdag", selection: $weighInWeekday) {
                     ForEach(weekdayOptions, id: \.value) { option in
                         Text(option.name).tag(option.value)
                     }

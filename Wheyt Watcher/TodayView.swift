@@ -443,8 +443,11 @@ struct TodayView: View {
         var missingDays: [Date] = []
         var offset = 1
 
+        let profileCreatedDay = calendar.startOfDay(for: profile.createdAt)
+
         while missingDays.count < 14 {
             guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { break }
+            guard day >= profileCreatedDay else { break }
 
             let hasFoodEntry = foodEntries.contains { calendar.isDate($0.date, inSameDayAs: day) }
             let isMarked = dayStatuses.contains { calendar.isDate($0.date, inSameDayAs: day) }

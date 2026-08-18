@@ -95,6 +95,9 @@ class _CopyMealDetailScreenState extends State<CopyMealDetailScreen> {
                       onToggleSelected: () => setState(() => selection.isSelected = !selection.isSelected),
                       onCategoryChanged: (c) => setState(() => selection.category = c),
                     ),
+                  // Extra ruimte onderaan zodat Scrollable.ensureVisible() ook producten
+                  // dicht bij het einde van de lijst kan centreren boven het toetsenbord.
+                  const SizedBox(height: 300),
                 ],
               ),
             ),

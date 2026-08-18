@@ -156,6 +156,9 @@ class _CopyProductsScreenState extends State<CopyProductsScreen> {
                           ),
                         ),
                       ),
+                      // Extra ruimte onderaan zodat Scrollable.ensureVisible() ook producten
+                      // dicht bij het einde van de lijst kan centreren boven het toetsenbord.
+                      const SizedBox(height: 300),
                     ],
                   ),
                 ),

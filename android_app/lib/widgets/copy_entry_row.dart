@@ -12,14 +12,32 @@ import '../theme/theme.dart';
 class CopySelection {
   CopySelection({required this.entry})
       : gramsController = TextEditingController(text: entry.grams.roundedInt.toString()),
-        category = entry.mealCategory;
+        gramsFocusNode = FocusNode(),
+        category = entry.mealCategory {
+    // Poort van de scroll-to-view-fix in `CopyMealsView.swift`: zonder dit
+    // blijft het gram-invoerveld onder het toetsenbord staan voor producten
+    // dicht bij het einde van de lijst.
+    gramsFocusNode.addListener(() {
+      if (!gramsFocusNode.hasFocus) return;
+      Future.delayed(const Duration(milliseconds: 300), () {
+        final context = gramsFocusNode.context;
+        if (context != null && context.mounted) {
+          Scrollable.ensureVisible(context, alignment: 0.5, duration: const Duration(milliseconds: 250));
+        }
+      });
+    });
+  }
 
   final FoodLogEntryRow entry;
   final TextEditingController gramsController;
+  final FocusNode gramsFocusNode;
   MealCategory category;
   bool isSelected = false;
 
-  void dispose() => gramsController.dispose();
+  void dispose() {
+    gramsController.dispose();
+    gramsFocusNode.dispose();
+  }
 }
 
 /// Poort van de herhaalde rij-UI in `CopyProductsEntryView`/
@@ -83,6 +101,7 @@ class CopyEntryRow extends StatelessWidget {
                       width: 56,
                       child: TextField(
                         controller: selection.gramsController,
+                        focusNode: selection.gramsFocusNode,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
                         style: TextStyle(color: WwColors.darkAccent(isDark)),

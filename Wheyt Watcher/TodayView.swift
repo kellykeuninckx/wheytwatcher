@@ -502,10 +502,11 @@ struct TodayView: View {
     private func refreshReminders() {
         let today = Calendar.current.startOfDay(for: Date())
         let hasLoggedToday = foodEntries.contains { Calendar.current.isDate($0.date, inSameDayAs: today) }
+        let isMarkedToday = dayStatuses.contains { Calendar.current.isDate($0.date, inSameDayAs: today) }
 
         ReminderManager.refreshEveningLogReminder(
             enabled: reminderEveningLog,
-            hasLoggedToday: hasLoggedToday
+            hasLoggedToday: hasLoggedToday || isMarkedToday
         )
 
         ReminderManager.setGoalEndingReminderEnabled(

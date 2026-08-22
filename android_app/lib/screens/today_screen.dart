@@ -384,14 +384,25 @@ class _TodayScreenState extends State<TodayScreen> {
     }
   }
 
-  bool? _lastHasLoggedToday;
+  bool? _lastSuppressEveningReminder;
 
   /// Ververst de "vandaag nog niet gelogd"-melding zodra het wel/niet-gelogd
-  /// zijn van vandaag verandert (zodat de 18:00-melding vervalt na het loggen).
+  /// zijn van vandaag verandert (zodat de 18:00-melding vervalt na het loggen),
+  /// of zodra vandaag als ziek/vakantie/rustdag gemarkeerd wordt.
   void _maybeRefreshEveningReminder(bool hasLoggedToday) {
-    if (_lastHasLoggedToday == hasLoggedToday) return;
-    _lastHasLoggedToday = hasLoggedToday;
-    ReminderService.refreshEveningLogReminder(hasLoggedToday: hasLoggedToday);
+    if (hasLoggedToday && _lastSuppressEveningReminder == true) return;
+    _refreshEveningReminderIfChanged(hasLoggedToday);
+  }
+
+  Future<void> _refreshEveningReminderIfChanged(bool hasLoggedToday) async {
+    var suppress = hasLoggedToday;
+    if (!suppress) {
+      final dayStatuses = await widget.db.select(widget.db.dayStatuses).get();
+      suppress = dayStatuses.any((s) => _isSameDay(s.date, DateTime.now()));
+    }
+    if (_lastSuppressEveningReminder == suppress) return;
+    _lastSuppressEveningReminder = suppress;
+    await ReminderService.refreshEveningLogReminder(hasLoggedToday: suppress);
   }
 
   String? _lastBadgeSignature;

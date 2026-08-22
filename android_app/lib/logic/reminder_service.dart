@@ -193,7 +193,10 @@ class ReminderService {
     bool isToday(DateTime d) => d.year == now.year && d.month == now.month && d.day == now.day;
 
     final allLogs = await db.select(db.foodLogEntries).get();
-    await refreshEveningLogReminder(hasLoggedToday: allLogs.any((e) => isToday(e.date)));
+    final allDayStatuses = await db.select(db.dayStatuses).get();
+    await refreshEveningLogReminder(
+      hasLoggedToday: allLogs.any((e) => isToday(e.date)) || allDayStatuses.any((s) => isToday(s.date)),
+    );
 
     await refreshWeeklyWeighInReminderIfNeeded();
 

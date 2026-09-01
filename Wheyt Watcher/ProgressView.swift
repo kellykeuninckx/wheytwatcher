@@ -58,8 +58,16 @@ struct ProgressViewScreen: View {
         measurementLogs.filter { $0.date >= rangeStartDate }
     }
 
+    /// Dagen met een DayStatus (ziek/vakantie/rustdag) — wat er op zo'n dag gelogd is, is geen
+    /// representatieve dag en hoort niet als uitschieter in de calorieën/eiwit-trend te staan.
+    private var markedDayDates: Set<Date> {
+        Set(dayStatuses.map { Calendar.current.startOfDay(for: $0.date) })
+    }
+
     private var filteredFood: [FoodLogEntry] {
-        foodEntries.filter { $0.date >= rangeStartDate }
+        foodEntries.filter {
+            $0.date >= rangeStartDate && !markedDayDates.contains(Calendar.current.startOfDay(for: $0.date))
+        }
     }
 
     private var filteredTrainings: [TrainingSession] {

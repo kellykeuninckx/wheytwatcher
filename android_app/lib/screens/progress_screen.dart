@@ -138,7 +138,13 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       builder: (context, measurementSnapshot) {
                         final allMeasurements = List.of(measurementSnapshot.data ?? const <BodyMeasurementLogRow>[])
                           ..sort((a, b) => a.date.compareTo(b.date));
-                        return _body(allWeights, allFood, allSnapshots, allMeasurements);
+                        return StreamBuilder<List<DayStatusRow>>(
+                          stream: widget.db.select(widget.db.dayStatuses).watch(),
+                          builder: (context, statusSnapshot) {
+                            final dayStatuses = statusSnapshot.data ?? const <DayStatusRow>[];
+                            return _body(allWeights, allFood, allSnapshots, allMeasurements, dayStatuses);
+                          },
+                        );
                       },
                     );
                   },
@@ -152,16 +158,20 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   Widget _body(List<WeightLogRow> allWeights, List<FoodLogEntryRow> allFood, List<DailyTargetSnapshotRow> allSnapshots,
-      List<BodyMeasurementLogRow> allMeasurements) {
+      List<BodyMeasurementLogRow> allMeasurements, List<DayStatusRow> dayStatuses) {
     final rangeStart = _rangeStart([
       ...allWeights.map((w) => w.date),
       ...allFood.map((f) => f.date),
     ]);
 
     final weights = allWeights.where((w) => !w.date.isBefore(rangeStart)).toList();
-    final food = allFood.where((f) => !f.date.isBefore(rangeStart)).toList();
     final snapshots = allSnapshots.where((s) => !s.date.isBefore(rangeStart)).toList();
     final measurements = allMeasurements.where((m) => !m.date.isBefore(rangeStart)).toList();
+
+    // Dagen met een DayStatus (ziek/vakantie/rustdag) tellen niet mee in de calorieën/eiwit-
+    // trend — wat er op zo'n dag gelogd is, is geen representatieve dag.
+    final markedDayDates = dayStatuses.map((s) => _startOfDay(s.date)).toSet();
+    final food = allFood.where((f) => !f.date.isBefore(rangeStart) && !markedDayDates.contains(_startOfDay(f.date))).toList();
 
     final dailyCalories = <DateTime, double>{};
     final dailyProtein = <DateTime, double>{};

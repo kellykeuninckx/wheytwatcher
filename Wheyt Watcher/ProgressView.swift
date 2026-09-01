@@ -169,6 +169,61 @@ struct ProgressViewScreen: View {
         return (minValue - padding)...(maxValue + padding)
     }
 
+    /// Berekent een Y-as die zich aanpast aan de werkelijk geplotte waarden (huidige periode),
+    /// afgerond op "nette" getallen met wat lucht — i.p.v. Charts' automatische schaal, die op
+    /// een breed/vast ogende as kan uitkomen (bv. altijd tot het eiwitdoel, ook als de trend
+    /// daar ver onder zit). `includeZero` houdt 0 in beeld, bedoeld voor staafdiagrammen.
+    private func adaptiveYDomain(for values: [Double], includeZero: Bool = false) -> ClosedRange<Double> {
+        var minValue = values.min() ?? 0
+        var maxValue = values.max() ?? 1
+        if includeZero {
+            minValue = min(minValue, 0)
+        }
+
+        guard maxValue > minValue else {
+            let pad = max(abs(maxValue) * 0.1, 1)
+            return (minValue - pad)...(maxValue + pad)
+        }
+
+        let padding = max((maxValue - minValue) * 0.15, 1)
+        let step = niceAxisStep(for: (maxValue + padding) - (minValue - padding))
+        var lower = ((minValue - padding) / step).rounded(.down) * step
+        let upper = ((maxValue + padding) / step).rounded(.up) * step
+        if includeZero {
+            lower = min(lower, 0)
+        }
+        return lower...upper
+    }
+
+    /// Rondt een as-bereik af op een "nette" stapgrootte (1/2/5 × 10^n), zodat de as-labels
+    /// niet grillig ogen.
+    private func niceAxisStep(for range: Double) -> Double {
+        guard range > 0 else { return 1 }
+        let roughStep = range / 5
+        let magnitude = pow(10, floor(log10(roughStep)))
+        let normalized = roughStep / magnitude
+        let niceNormalized: Double
+        switch normalized {
+        case ..<1.5: niceNormalized = 1
+        case ..<3: niceNormalized = 2
+        case ..<7: niceNormalized = 5
+        default: niceNormalized = 10
+        }
+        return niceNormalized * magnitude
+    }
+
+    private var proteinYDomain: ClosedRange<Double> {
+        adaptiveYDomain(for: Array(dailyProtein.values) + Array(dailyTargetProtein.values))
+    }
+
+    private var caloriesYDomain: ClosedRange<Double> {
+        adaptiveYDomain(for: Array(dailyCalories.values), includeZero: true)
+    }
+
+    private var measurementYDomain: ClosedRange<Double> {
+        adaptiveYDomain(for: measurementPoints.map { $0.value })
+    }
+
     private var axisStride: Int {
         max(totalDaysInRange / 5, 1)
     }
@@ -234,6 +289,7 @@ struct ProgressViewScreen: View {
                     Chart {
                         caloriesChartMarks
                     }
+                    .chartYScale(domain: caloriesYDomain)
                     .chartXAxis {
                         AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                             AxisGridLine()
@@ -257,6 +313,7 @@ struct ProgressViewScreen: View {
                     Chart {
                         proteinChartMarks
                     }
+                    .chartYScale(domain: proteinYDomain)
                     .chartXAxis {
                         AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                             AxisGridLine()
@@ -280,6 +337,7 @@ struct ProgressViewScreen: View {
                     Chart {
                         measurementChartMarks
                     }
+                    .chartYScale(domain: measurementYDomain)
                     .chartXAxis {
                         AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                             AxisGridLine()
@@ -712,6 +770,7 @@ struct ProgressViewScreen: View {
                     caloriesChartMarks
                 }
                 .frame(height: 180)
+                .chartYScale(domain: caloriesYDomain)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                         AxisGridLine()
@@ -785,6 +844,7 @@ struct ProgressViewScreen: View {
                     proteinChartMarks
                 }
                 .frame(height: 130)
+                .chartYScale(domain: proteinYDomain)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: compactAxisStride)) { _ in
                         AxisGridLine()
@@ -888,6 +948,7 @@ struct ProgressViewScreen: View {
                     measurementChartMarks
                 }
                 .frame(height: 150)
+                .chartYScale(domain: measurementYDomain)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: axisStride)) { _ in
                         AxisGridLine()

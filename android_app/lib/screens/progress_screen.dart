@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
@@ -513,11 +515,15 @@ class _ProgressScreenState extends State<ProgressScreen> {
         .map((d) => FlSpot(d.difference(origin).inDays.toDouble(), dailyTargetProtein[d]!))
         .toList();
 
+    final (minY, maxY) = _adaptiveYRange([...dailyProtein.values, ...dailyTargetProtein.values]);
+
     return LineChart(
       LineChartData(
+        minY: minY,
+        maxY: maxY,
         gridData: const FlGridData(show: false),
         borderData: FlBorderData(show: false),
-        titlesData: _compactTitlesData(origin, days.length),
+        titlesData: _compactTitlesData(origin, days.length, leftInterval: (maxY - minY) / 4),
         lineTouchData: const LineTouchData(enabled: false),
         lineBarsData: [
           LineChartBarData(spots: actualSpots, isCurved: false, color: WwColors.teal, barWidth: 2, dotData: const FlDotData(show: true)),
@@ -572,8 +578,12 @@ class _ProgressScreenState extends State<ProgressScreen> {
       );
     }).toList();
 
+    final (minY, maxY) = _adaptiveYRange(dailyCalories.values.toList(), includeZero: true);
+
     return BarChart(
       BarChartData(
+        minY: minY,
+        maxY: maxY,
         gridData: const FlGridData(show: false),
         borderData: FlBorderData(show: false),
         titlesData: _titlesData(origin, days.length, stride: (days.length / 5).ceil().clamp(1, 1000)),
@@ -581,6 +591,49 @@ class _ProgressScreenState extends State<ProgressScreen> {
         barGroups: groups,
       ),
     );
+  }
+
+  /// Berekent een Y-as die zich aanpast aan de werkelijk geplotte waarden (huidige periode),
+  /// afgerond op "nette" getallen met wat lucht — i.p.v. een grafiek die kan uitrekken tot een
+  /// vast/breed ogende as (bv. altijd tot het eiwitdoel, ook als de trend daar ver onder zit).
+  /// `includeZero` houdt 0 in beeld, bedoeld voor staafdiagrammen.
+  (double, double) _adaptiveYRange(List<double> values, {bool includeZero = false}) {
+    if (values.isEmpty) return (0, 1);
+
+    var minY = values.reduce((a, b) => a < b ? a : b);
+    var maxY = values.reduce((a, b) => a > b ? a : b);
+    if (includeZero) minY = minY < 0 ? minY : 0;
+
+    if (maxY <= minY) {
+      final pad = (maxY.abs() * 0.1).clamp(1.0, double.infinity);
+      return (minY - pad, maxY + pad);
+    }
+
+    final padding = ((maxY - minY) * 0.15).clamp(1.0, double.infinity);
+    final step = _niceAxisStep((maxY + padding) - (minY - padding));
+    var lower = ((minY - padding) / step).floorToDouble() * step;
+    final upper = ((maxY + padding) / step).ceilToDouble() * step;
+    if (includeZero) lower = lower < 0 ? lower : 0;
+    return (lower, upper);
+  }
+
+  /// Rondt een as-bereik af op een "nette" stapgrootte (1/2/5 × 10^n).
+  double _niceAxisStep(double range) {
+    if (range <= 0) return 1;
+    final roughStep = range / 4;
+    final magnitude = math.pow(10, (math.log(roughStep) / math.ln10).floorToDouble()).toDouble();
+    final normalized = roughStep / magnitude;
+    final double niceNormalized;
+    if (normalized < 1.5) {
+      niceNormalized = 1;
+    } else if (normalized < 3) {
+      niceNormalized = 2;
+    } else if (normalized < 7) {
+      niceNormalized = 5;
+    } else {
+      niceNormalized = 10;
+    }
+    return niceNormalized * magnitude;
   }
 
   FlTitlesData _compactTitlesData(DateTime origin, int pointCount, {double? leftInterval, int leftDecimals = 0}) {

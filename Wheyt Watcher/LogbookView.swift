@@ -228,12 +228,27 @@ struct LogbookView: View {
     // MARK: - Filter
 
     private var filterRow: some View {
-        Picker("Filter", selection: $selectedFilter) {
+        HStack(spacing: 8) {
             ForEach(LogFilter.allCases) { filter in
-                Text(filter.rawValue).tag(filter)
+                let isSelected = selectedFilter == filter
+
+                Button {
+                    selectedFilter = filter
+                } label: {
+                    Text(filter.rawValue)
+                        .font(.subheadline.weight(isSelected ? .bold : .medium))
+                        .foregroundStyle(isSelected ? Color.white : Color.wwSecondaryText)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            Capsule()
+                                .fill(isSelected ? Color.wwTeal : Color.clear)
+                        )
+                }
+                .buttonStyle(.plain)
             }
         }
-        .pickerStyle(.segmented)
         .padding(.vertical, 4)
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
         .listRowBackground(Color.clear)

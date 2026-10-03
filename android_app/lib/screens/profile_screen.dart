@@ -475,7 +475,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (_reminderWeekly)
             Row(
               children: [
-                Text('Wegdag', style: TextStyle(color: WwColors.darkAccent(isDark))),
+                Text('Weegdag', style: TextStyle(color: WwColors.darkAccent(isDark))),
                 const Spacer(),
                 DropdownButton<int>(
                   value: _weighInWeekday,

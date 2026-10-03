@@ -139,13 +139,20 @@ class _TodayScreenState extends State<TodayScreen> {
     final db = widget.db;
     final food = await db.select(db.foodLogEntries).get();
     final dayStatuses = await db.select(db.dayStatuses).get();
+    final profile = await db.select(db.userProfiles).getSingleOrNull();
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final profileCreatedDay = profile == null
+        ? null
+        : DateTime(profile.createdAt.year, profile.createdAt.month, profile.createdAt.day);
     final missing = <DateTime>[];
     var offset = 1;
     while (missing.length < 14) {
       final day = today.subtract(Duration(days: offset));
+      // Zelfde grens als iOS: een gloednieuw account mag niet meteen een "14 dagen gemist"-popup
+      // krijgen voor dagen van vóór het account bestond.
+      if (profileCreatedDay != null && day.isBefore(profileCreatedDay)) break;
       final hasFood = food.any((e) => _isSameDay(e.date, day));
       final isMarked = dayStatuses.any((s) => _isSameDay(s.date, day));
       if (hasFood || isMarked) break;

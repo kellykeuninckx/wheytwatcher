@@ -33,6 +33,7 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _nameController = TextEditingController();
+  final _ageController = TextEditingController(text: '30');
   final _heightController = TextEditingController(text: '180');
   final _weightController = TextEditingController(text: '80');
   final _bodyFatController = TextEditingController();
@@ -43,7 +44,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _armController = TextEditingController();
   final _thighController = TextEditingController();
 
-  int _age = 30;
   Sex _sex = Sex.male;
   GoalMode _goalMode = GoalMode.maintenance;
   GoalPace _goalPace = GoalPace.normal;
@@ -55,6 +55,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _ageController.dispose();
     _heightController.dispose();
     _weightController.dispose();
     _bodyFatController.dispose();
@@ -88,6 +89,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _saveProfile() async {
     final name = _nameController.text.trim();
+    final age = int.tryParse(_ageController.text.trim()) ?? 30;
     final heightCm = _parseDutch(_heightController.text) ?? 180;
     final weightKg = _parseDutch(_weightController.text) ?? 80;
 
@@ -99,7 +101,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final profileId = await db.into(db.userProfiles).insert(
           UserProfilesCompanion.insert(
             name: name,
-            age: _age,
+            age: age,
             sex: _sex,
             heightCm: heightCm,
             currentWeightKg: weightKg,
@@ -166,7 +168,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           children: [
             _section('Jij', [
               _textRow('Naam', _nameController, onChanged: (_) => setState(() {})),
-              _stepperRow('Leeftijd', '$_age', onDecrement: _age > 12 ? () => setState(() => _age--) : null, onIncrement: _age < 90 ? () => setState(() => _age++) : null),
+              _numberRow('Leeftijd', _ageController, 'jaar', allowDecimal: false),
               _enumDropdown<Sex>(
                 label: 'Geslacht',
                 value: _sex,
@@ -260,7 +262,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const SizedBox(height: 16),
             _section('Wekelijkse weeg-herinnering', [
               _enumDropdown<int>(
-                label: 'Wegdag',
+                label: 'Weegdag',
                 value: _weighInWeekday,
                 values: const [1, 2, 3, 4, 5, 6, 7],
                 labelOf: (v) => _weekdayNames[v - 1][0].toUpperCase() + _weekdayNames[v - 1].substring(1),
@@ -333,7 +335,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _numberRow(String label, TextEditingController controller, String unit) {
+  Widget _numberRow(String label, TextEditingController controller, String unit, {bool allowDecimal = true}) {
     final isDark = widget.isDark;
     return Row(
       children: [
@@ -344,8 +346,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: TextField(
             controller: controller,
             onChanged: (_) => setState(() {}),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+            keyboardType: TextInputType.numberWithOptions(decimal: allowDecimal),
+            inputFormatters: [FilteringTextInputFormatter.allow(allowDecimal ? RegExp(r'[0-9.,]') : RegExp(r'[0-9]'))],
             textAlign: TextAlign.right,
             style: TextStyle(color: WwColors.darkAccent(isDark)),
             decoration: const InputDecoration(border: InputBorder.none, isDense: true),

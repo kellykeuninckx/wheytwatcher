@@ -119,6 +119,32 @@ void main() {
     await db.close();
   });
 
+  testWidgets('Gloednieuw account krijgt geen "dagen niet gelogd"-popup (pariteit met iOS)', (WidgetTester tester) async {
+    final db = AppDatabase.forTesting();
+    // Account net vandaag aangemaakt, geen enkele log of dagstatus — zonder de createdAt-grens
+    // (zie TodayScreen._maybeCheckMissedDays) zou dit alle 14 voorgaande dagen als "gemist" tellen.
+    await db.into(db.userProfiles).insert(
+          UserProfilesCompanion.insert(
+            name: 'Jij',
+            age: 30,
+            sex: Sex.male,
+            heightCm: 175,
+            currentWeightKg: 75,
+            goalMode: GoalMode.maintenance,
+            goalPace: GoalPace.normal,
+            activityLevel: ActivityLevel.moderate,
+            createdAt: DateTime.now(),
+          ),
+        );
+
+    await tester.pumpWidget(WheyMateApp(db: db));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('dagen niet gelogd'), findsNothing);
+
+    await db.close();
+  });
+
   testWidgets('Product zoeken en loggen werkt de Vandaag-cijfers bij', (WidgetTester tester) async {
     final db = AppDatabase.forTesting();
     await db.into(db.userProfiles).insert(

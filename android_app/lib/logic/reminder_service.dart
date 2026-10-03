@@ -33,7 +33,7 @@ class ReminderService {
   static const String kWeighInWeekday = 'wwWeighInWeekday';
   static const String _variantKey = 'wwWeighInVariantIndex';
 
-  /// Wegdag volgt iOS' Calendar-conventie: 1 = zondag … 7 = zaterdag. Default 2 (maandag).
+  /// Weegdag volgt iOS' Calendar-conventie: 1 = zondag … 7 = zaterdag. Default 2 (maandag).
   static const int _defaultWeekday = 2;
 
   static const List<String> _weighInVariants = [
